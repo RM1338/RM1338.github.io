@@ -18,6 +18,6 @@ results:
   - { value: "~16k", label: "lines of Dart", evidence: measured }
 limits:
   - No usage numbers. Scribe is shown as a shipped product, not a traction story.
-try: "Send one request two ways and watch where the key lives. Then sign out and try again."
+try: "Record a short meeting on a working mock of the app. Watch it transcribe and summarise, then switch whose key it uses, including the one you should never ship."
 next: "Speaker diarization (who said what), shareable summary links, and audio sync across devices."
 ---

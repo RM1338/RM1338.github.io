@@ -1,107 +1,283 @@
 ---
-// Follow one Scribe AI request: with the user's own key, or through the
-// sign-in-gated edge function that holds the shared key (supabase/functions).
+// A working mock of Scribe: record a scripted meeting, watch it transcribe, get
+// the summary, and see where audio, text and the API key go. The key paths
+// follow Scribe's code: own key goes straight to Groq; otherwise the
+// groq-transcribe / groq-chat edge functions, which reject signed-out users.
+const script = [
+  { who: 'Asha', t: 3, en: 'Can we ship v2 on the 14th?', es: '¿Podemos lanzar la v2 el día 14?' },
+  { who: 'Sam', t: 7, en: 'Yes, if the login fix lands by Friday.', es: 'Sí, si el arreglo del inicio de sesión está listo el viernes.' },
+  { who: 'Asha', t: 12, en: 'Okay. Who owns the login fix?', es: 'Vale. ¿Quién se encarga del arreglo?' },
+  { who: 'Sam', t: 15, en: 'Me. And I’ll send the budget on Friday too.', es: 'Yo. Y también enviaré el presupuesto el viernes.' },
+  { who: 'Asha', t: 19, en: 'Great, then the 14th it is.', es: 'Perfecto, entonces el 14.' },
+];
+const summary = {
+  en: { d: ['Ship v2 on the 14th'], a: ['Sam: login fix by Friday', 'Sam: send the budget on Friday'], h: 'Decisions', i: 'Action items', lang: 'English' },
+  es: { d: ['Lanzar la v2 el día 14'], a: ['Sam: arreglo del inicio de sesión para el viernes', 'Sam: enviar el presupuesto el viernes'], h: 'Decisiones', i: 'Tareas', lang: 'Español' },
+};
 ---
 
-<div class="flow" data-scribe-flow>
-  <div class="controls">
-    <p class="label">Where does the key live?</p>
-    <div class="seg" role="radiogroup" aria-label="Which key does the request use?">
-      <button type="button" role="radio" aria-checked="true" data-mode="own">I added my own key</button>
-      <button type="button" role="radio" aria-checked="false" data-mode="proxy">I have no key</button>
+<div class="demo" data-scribe data-script={JSON.stringify(script)} data-summary={JSON.stringify(summary)}>
+  <div class="stage">
+    <div class="phone" data-view="idle">
+      <div class="notch"></div>
+      <p class="app-title">Weekly sync</p>
+
+      <div class="screen rec-screen">
+        <p class="timer mono" data-timer>00:00</p>
+        <div class="wave" aria-hidden="true">{Array.from({ length: 28 }, () => <i />)}</div>
+        <ol class="lines" data-lines aria-live="polite"></ol>
+        <div class="rec-row">
+          <button type="button" class="mark" data-mark aria-label="Bookmark this moment">⚑</button>
+          <button type="button" class="rec" data-rec aria-label="Start or stop recording"><span></span></button>
+          <span class="marks mono" data-marks></span>
+        </div>
+      </div>
+
+      <div class="screen busy-screen">
+        <div class="spinner"></div>
+        <p class="mono" data-busy>Transcribing…</p>
+      </div>
+
+      <div class="screen sum-screen">
+        <div class="sum-head">
+          <span class="chip mono" data-lang-label>English</span>
+          <button type="button" class="chip mono btn-chip" data-translate>Translate</button>
+        </div>
+        <p class="sec" data-h>Decisions</p>
+        <ul data-d></ul>
+        <p class="sec" data-i>Action items</p>
+        <ul data-a></ul>
+        <button type="button" class="again mono" data-again>Record again</button>
+      </div>
+
+      <div class="screen err-screen">
+        <p class="err-big">401</p>
+        <p>Sign in to use Scribe’s shared key.</p>
+        <button type="button" class="again mono" data-again>Back</button>
+      </div>
+
+      <div class="leak">
+        <strong>Key extracted from the APK</strong>
+        <span class="mono">gsk_••••••••••••••••</span>
+      </div>
     </div>
-    <label class="check"><input type="checkbox" checked data-signed /> Signed in to Scribe</label>
-    <button type="button" class="send" data-send>Transcribe a meeting</button>
   </div>
 
-  <div class="diagram">
-    <div class="node phone"><strong>Your phone</strong><span class="mono" data-k="phone"></span></div>
-    <div class="node edge" data-edge><strong>Edge function</strong><span class="mono" data-k="edge"></span></div>
-    <div class="node groq"><strong>Groq</strong><span class="mono">Whisper, GPT-OSS</span></div>
-    <div class="wire direct" data-wire="own"><i></i></div>
-    <div class="wire hop1" data-wire="proxy"><i></i></div>
-    <div class="wire hop2" data-wire="proxy2"><i></i></div>
+  <div class="side">
+    <div class="ctl">
+      <p class="label">Whose key?</p>
+      <div class="seg" role="radiogroup" aria-label="Which API key does Scribe use?">
+        <button type="button" role="radio" aria-checked="true" data-key="own">My own key</button>
+        <button type="button" role="radio" aria-checked="false" data-key="proxy">Scribe’s shared key</button>
+        <button type="button" role="radio" aria-checked="false" data-key="apk" class="danger">What if: key inside the app</button>
+      </div>
+      <label class="check"><input type="checkbox" checked data-signed /> Signed in</label>
+    </div>
+    <div>
+      <p class="label">Behind the scenes</p>
+      <pre class="log" data-log></pre>
+    </div>
   </div>
-
-  <pre class="out" aria-live="polite" data-out></pre>
+  <p class="note mono">A scripted meeting, for illustration. The data paths follow Scribe’s code.</p>
 </div>
 
 <script>
-  for (const root of document.querySelectorAll<HTMLElement>('[data-scribe-flow]')) {
-    const $ = <T extends HTMLElement>(s: string) => root.querySelector<T>(s)!;
-    const out = $('[data-out]');
-    const signed = $<HTMLInputElement>('[data-signed]');
-    let mode = 'own';
+  type Line = { who: string; t: number; en: string; es: string };
+  type Sum = Record<'en' | 'es', { d: string[]; a: string[]; h: string; i: string; lang: string }>;
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    const paint = () => {
-      root.dataset.mode = mode;
-      root.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.mode === mode)));
-      $('[data-k="phone"]').textContent = mode === 'own' ? 'audio + your key' : 'audio + sign-in token';
-      $('[data-k="edge"]').textContent = mode === 'own' ? 'not used' : 'holds the shared key';
-      out.textContent = mode === 'own'
-        ? 'Your key lives in Scribe’s settings on your phone. The request goes straight to Groq.'
-        : 'No key on the phone at all. The request goes to Scribe’s edge function, which checks you are signed in and adds the shared key on the server.';
+  for (const root of document.querySelectorAll<HTMLElement>('[data-scribe]')) {
+    const script: Line[] = JSON.parse(root.dataset.script!);
+    const sum: Sum = JSON.parse(root.dataset.summary!);
+    const $ = <T extends HTMLElement>(s: string) => root.querySelector<T>(s)!;
+    const phone = $('.phone'), log = $('[data-log]'), lines = $('[data-lines]'), timer = $('[data-timer]');
+    const bars = [...root.querySelectorAll<HTMLElement>('.wave i')];
+    let key = 'own', lang: 'en' | 'es' = 'en', sec = 0, marks = 0;
+    let tick = 0, wave = 0;
+    const later: number[] = [];
+
+    const view = (v: string) => (phone.dataset.view = v);
+    const say = (html: string) => { log.insertAdjacentHTML('beforeend', html + '\n'); log.scrollTop = log.scrollHeight; };
+    const clock = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+    const after = (ms: number, fn: () => void) => later.push(window.setTimeout(fn, ms));
+    const stopTimers = () => {
+      clearInterval(tick); clearInterval(wave);
+      later.splice(0).forEach(clearTimeout);
+      bars.forEach((b) => (b.style.height = '12%'));
     };
-    root.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach((b) =>
-      b.addEventListener('click', () => { mode = b.dataset.mode!; paint(); }),
-    );
-    $('[data-send]').addEventListener('click', () => {
-      root.classList.remove('go', 'stop');
-      void root.offsetWidth;
-      if (mode === 'proxy' && !signed.checked) {
-        root.classList.add('go', 'stop');
-        out.innerHTML = '<span class="bad">401 Unauthorized</span>\nThe edge function refuses requests from anyone who is not signed in, so the shared key cannot be used by strangers.';
+
+    const reset = () => {
+      stopTimers();
+      sec = 0; marks = 0;
+      timer.textContent = '00:00';
+      lines.innerHTML = '';
+      $('[data-marks]').textContent = '';
+      root.classList.remove('leaked');
+      view('idle');
+      log.textContent = '';
+      say(`<span class="m">key: ${key === 'own' ? 'your own Groq key, in Scribe’s settings' : key === 'proxy' ? 'none on the phone' : 'hard-coded inside the app'}</span>`);
+      say('<span class="m">press the red button to record</span>');
+    };
+
+    const start = () => {
+      view('rec');
+      lines.innerHTML = '';
+      say('● recording · audio file saved on this phone');
+      if (!still) wave = window.setInterval(() => bars.forEach((b) => (b.style.height = `${12 + Math.random() * 88}%`)), 120);
+      tick = window.setInterval(() => {
+        sec++;
+        timer.textContent = clock(sec);
+        const l = script.find((x) => x.t === sec);
+        if (l) {
+          lines.insertAdjacentHTML('beforeend', `<li><b>${l.who}</b>${l.en}</li>`);
+          lines.scrollTop = lines.scrollHeight;
+        }
+        if (sec >= 21) stop();
+      }, still ? 250 : 400);
+    };
+
+    const stop = () => {
+      stopTimers();
+      view('busy');
+      $('[data-busy]').textContent = 'Transcribing…';
+      say(`■ stopped at ${clock(sec)}${marks ? ` · ${marks} bookmark${marks > 1 ? 's' : ''}` : ''}`);
+      if (key === 'apk') {
+        say('$ unzip -p scribe.apk | strings | grep gsk_');
+        say('<span class="r">gsk_••••••••••••••••  ← anyone with the APK can do this</span>');
+        root.classList.add('leaked');
+      }
+      if (key === 'proxy' && !$<HTMLInputElement>('[data-signed]').checked) {
+        say('→ POST edge function groq-transcribe (not signed in)');
+        after(700, () => { say('<span class="r">← 401 Unauthorized · the shared key stays unused</span>'); view('err'); });
         return;
       }
-      root.classList.add('go');
-      out.innerHTML = mode === 'own'
-        ? '<span class="ok">200</span> transcript returned · billed to your own Groq account'
-        : '<span class="ok">200</span> transcript returned · the shared key never left the server';
+      say(key === 'proxy'
+        ? '→ POST edge function groq-transcribe (signed in)\n  server adds the shared key → whisper-large-v3-turbo'
+        : `→ POST Groq whisper-large-v3-turbo with ${key === 'own' ? 'your key' : 'the leaked key'}`);
+      after(800, () => {
+        say('<span class="g">← transcript · language detected: English</span>');
+        $('[data-busy]').textContent = 'Summarising…';
+        say(key === 'proxy' ? '→ POST edge function groq-chat → gpt-oss-120b' : '→ POST Groq gpt-oss-120b');
+      });
+      after(1700, () => {
+        say('<span class="g">← summary</span>');
+        say('↻ transcript and summary synced to your account\n  audio stays on the phone');
+        lang = 'en';
+        paintSummary(true);
+        view('sum');
+      });
+    };
+
+    const paintSummary = (animate: boolean) => {
+      const s = sum[lang];
+      $('[data-h]').textContent = s.h;
+      $('[data-i]').textContent = s.i;
+      $('[data-lang-label]').textContent = s.lang;
+      const fill = (sel: string, items: string[], base: number) =>
+        ($(sel).innerHTML = items.map((x, n) => `<li style="animation-delay:${animate ? (base + n) * 0.15 : 0}s">${x}</li>`).join(''));
+      fill('[data-d]', s.d, 0);
+      fill('[data-a]', s.a, 1);
+    };
+
+    $('[data-rec]').addEventListener('click', () => (phone.dataset.view === 'rec' ? stop() : start()));
+    $('[data-mark]').addEventListener('click', () => {
+      if (phone.dataset.view !== 'rec') return;
+      marks++;
+      $('[data-marks]').textContent = `⚑ ${marks}`;
+      say(`⚑ bookmark at ${clock(sec)}`);
     });
-    paint();
+    $('[data-translate]').addEventListener('click', () => {
+      lang = lang === 'en' ? 'es' : 'en';
+      say(`→ translate summary to ${sum[lang].lang} · gpt-oss-120b`);
+      paintSummary(false);
+    });
+    root.querySelectorAll<HTMLElement>('[data-again]').forEach((b) => b.addEventListener('click', reset));
+    root.querySelectorAll<HTMLButtonElement>('[data-key]').forEach((b) =>
+      b.addEventListener('click', () => {
+        key = b.dataset.key!;
+        root.querySelectorAll('[data-key]').forEach((x) => x.setAttribute('aria-checked', String(x === b)));
+        reset();
+      }),
+    );
+    $('[data-signed]').addEventListener('change', reset);
+    reset();
   }
 </script>
 
 <style>
-  .flow { display: grid; grid-template-columns: 1fr 1.6fr; border: 1.5px solid var(--ink); background: var(--surface); }
-  .controls { padding: 20px; display: flex; flex-direction: column; gap: 14px; border-right: 1px solid var(--line); }
+  .demo { display: grid; grid-template-columns: minmax(300px, 1fr) 1.3fr; border: 1.5px solid var(--ink); background: var(--surface); }
+  .stage {
+    display: grid; place-items: center; padding: 32px 20px;
+    background: radial-gradient(circle at 1px 1px, var(--line) 1px, transparent 0) 0 0 / 16px 16px, var(--bg);
+    border-right: 1px solid var(--line);
+  }
+  .phone {
+    position: relative; width: 260px; height: 520px; border: 10px solid #1d1d1d; border-radius: 38px;
+    background: #fff; padding: 34px 18px 18px; overflow: hidden; box-shadow: 0 24px 48px -24px rgb(0 0 0 / 0.35);
+  }
+  .notch { position: absolute; top: 8px; left: 50%; width: 70px; height: 18px; border-radius: 10px; background: #1d1d1d; transform: translateX(-50%); }
+  .app-title { margin: 0; font-weight: 700; font-size: 18px; letter-spacing: -0.01em; }
+  .screen { display: none; position: absolute; inset: 64px 18px 18px; flex-direction: column; }
+  [data-view='idle'] .rec-screen, [data-view='rec'] .rec-screen, [data-view='busy'] .busy-screen,
+  [data-view='sum'] .sum-screen, [data-view='err'] .err-screen { display: flex; }
+
+  .timer { margin: 0; font-size: 30px; font-weight: 600; text-align: center; }
+  .wave { display: flex; align-items: center; gap: 3px; height: 56px; margin: 10px 0; flex: none; }
+  .wave i { flex: 1; height: 12%; background: var(--ink); border-radius: 2px; transition: height 0.12s; }
+  [data-view='idle'] .wave i { background: var(--line); }
+  .lines { list-style: none; margin: 0; padding: 0; flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; font-size: 13px; line-height: 1.35; }
+  .lines :global(li) { background: var(--bg); padding: 8px 10px; border-radius: 10px; animation: pop 0.3s ease-out both; }
+  .lines :global(b) { display: block; font-size: 11px; color: var(--muted); }
+  [data-view='idle'] .lines::before { content: 'Press the red button to start a meeting.'; color: var(--muted); font-size: 13px; text-align: center; margin-top: 40px; }
+  .rec-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding-top: 12px; flex: none; }
+  .rec { width: 64px; height: 64px; border-radius: 50%; border: 4px solid var(--ink); background: #fff; display: grid; place-items: center; cursor: pointer; padding: 0; }
+  .rec span { width: 42px; height: 42px; border-radius: 50%; background: var(--accent); transition: all 0.2s; }
+  [data-view='rec'] .rec span { width: 24px; height: 24px; border-radius: 5px; }
+  [data-view='rec'] .rec { animation: pulse 1.4s infinite; }
+  .mark { justify-self: start; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line); background: var(--bg); font-size: 16px; cursor: pointer; color: var(--ink); }
+  [data-view='idle'] .mark { opacity: 0.35; }
+  .marks { justify-self: end; font-size: 13px; color: var(--accent); }
+
+  .busy-screen { align-items: center; justify-content: center; gap: 16px; color: var(--muted); }
+  .spinner { width: 40px; height: 40px; border-radius: 50%; border: 4px solid var(--line); border-top-color: var(--accent); animation: spin 0.8s linear infinite; }
+
+  .sum-head { display: flex; justify-content: space-between; margin-top: 8px; }
+  .chip { border: 1px solid var(--ink); padding: 4px 8px; font-size: 11px; background: #fff; color: var(--ink); }
+  .btn-chip { cursor: pointer; background: var(--ink); color: #fff; }
+  .btn-chip:hover { background: var(--accent); border-color: var(--accent); color: #141414; }
+  .sec { margin: 14px 0 6px; font-weight: 700; font-size: 15px; }
+  .sum-screen ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .sum-screen :global(li) { background: var(--bg); border-left: 3px solid var(--accent); padding: 8px 10px; font-size: 13px; line-height: 1.35; animation: pop 0.35s ease-out both; }
+  .again { margin-top: auto; align-self: center; border: 0; background: none; text-decoration: underline; cursor: pointer; font-size: 12px; color: var(--ink); }
+  .err-screen { align-items: center; justify-content: center; text-align: center; gap: 4px; font-size: 14px; }
+  .err-big { margin: 0; font-size: 56px; font-weight: 800; color: #d12f2f; }
+
+  .leak { position: absolute; left: 10px; right: 10px; bottom: 44px; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; background: #d12f2f; color: #fff; font-size: 13px; transform: translateY(260%); transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); z-index: 2; }
+  .leak .mono { font-size: 11px; }
+  :global(.leaked) .leak { transform: none; }
+
+  .side { padding: 20px; display: grid; grid-template-rows: auto 1fr; gap: 20px; min-width: 0; }
+  .ctl { display: grid; gap: 10px; }
   .seg { display: grid; gap: 6px; }
   .seg button { padding: 10px 12px; border: 1px solid var(--line); background: var(--bg); font: inherit; font-size: 15px; text-align: left; cursor: pointer; color: var(--ink); }
   .seg button[aria-checked='true'] { border-color: var(--ink); background: var(--surface); box-shadow: inset 3px 0 0 var(--accent); }
+  .seg .danger[aria-checked='true'] { box-shadow: inset 3px 0 0 #d12f2f; }
   .check { font-size: 15px; display: flex; gap: 8px; align-items: center; }
   .check input { accent-color: var(--accent); width: 18px; height: 18px; }
-  .send { align-self: start; padding: 10px 18px; border-radius: 999px; border: 1px solid var(--ink); background: var(--ink); color: var(--bg); font: 500 14px var(--sans); cursor: pointer; }
-  .send:hover { background: var(--accent); border-color: var(--accent); color: #141414; }
+  .log { margin: 10px 0 0; background: #141414; color: #e8e8e4; padding: 14px; height: 240px; overflow-y: auto; font: 12px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .log :global(.g) { color: #7ee2a8; }
+  .log :global(.r) { color: #ff7b72; }
+  .log :global(.m) { color: #8f8f8f; }
+  .note { grid-column: 1 / -1; margin: 0; padding: 10px 20px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
 
-  .diagram { position: relative; min-height: 260px; margin: 20px; }
-  .node { position: absolute; display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border: 1.5px solid var(--ink); background: var(--surface); width: 30%; font-size: 15px; z-index: 1; }
-  .node span { font-size: 12px; color: var(--muted); }
-  .phone { left: 0; top: 0; }
-  .groq { right: 0; top: 0; }
-  .edge { left: 35%; bottom: 0; transition: opacity 0.3s; }
-  [data-mode='own'] .edge { opacity: 0.35; }
-  .wire { position: absolute; height: 2px; background: var(--line); transform-origin: left center; }
-  .wire i { position: absolute; left: 0; top: -5px; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); opacity: 0; }
-  .direct { left: 30%; top: 30px; width: 40%; }
-  .hop1 { left: 15%; top: 70px; width: 32%; transform: rotate(48deg); }
-  .hop2 { left: 55%; top: 205px; width: 32%; transform: rotate(-48deg); }
-  [data-mode='own'] .direct, [data-mode='proxy'] .hop1, [data-mode='proxy'] .hop2 { background: var(--ink); }
-  :global(.go)[data-mode='own'] .direct i { animation: travel 0.9s ease-in-out forwards; }
-  :global(.go)[data-mode='proxy'] .hop1 i { animation: travel 0.8s ease-in-out forwards; }
-  :global(.go)[data-mode='proxy']:not(:global(.stop)) .hop2 i { animation: travel 0.8s ease-in-out 0.8s forwards; }
-  :global(.stop) .edge { border-color: #d12f2f; box-shadow: 0 0 0 3px rgb(209 47 47 / 0.2); }
-  @keyframes travel { 0% { left: 0; opacity: 1; } 100% { left: calc(100% - 12px); opacity: 1; } }
-
-  .out { grid-column: 1 / -1; margin: 0; background: #141414; color: #e8e8e4; padding: 14px 20px; font: 13px/1.55 var(--mono); white-space: pre-wrap; height: 96px; overflow-y: auto; }
-  .out :global(.ok) { color: #7ee2a8; }
-  .out :global(.bad) { color: #ff7b72; }
+  @keyframes pop { from { opacity: 0; transform: translateY(6px); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 10px rgb(255 90 31 / 0.18); } }
   @media (max-width: 960px) {
-    .flow { grid-template-columns: 1fr; }
-    .controls { border-right: 0; border-bottom: 1px solid var(--line); }
-    .node { width: 42%; font-size: 13px; }
-    .edge { left: 29%; }
+    .demo { grid-template-columns: 1fr; }
+    .stage { border-right: 0; border-bottom: 1px solid var(--line); }
   }
   @media (prefers-reduced-motion: reduce) {
-    .wire i { animation: none !important; }
+    .lines :global(li), .sum-screen :global(li), .spinner, [data-view='rec'] .rec { animation: none; }
   }
 </style>
