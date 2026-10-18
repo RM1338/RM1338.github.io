@@ -166,6 +166,21 @@ const steps = [
         I’m Ronel. I build software that lets AI agents act without asking anyone to trust their judgement. That
         started with Scribe, a meeting recorder I shipped on my own, became a research project in Gremlin, and is now Crewbo, my startup.
       </p>
+      <dl class="facts">
+        <div>
+          <dt class="label">Now</dt>
+          <dd>AI Engineer Trainee, Karunya Innovation and Design Studio <span class="muted">· Dec 2025 to now</span></dd>
+          <dd class="muted">Agentic AI systems and generative AI prototypes: tool-using agents and multi-step reasoning workflows.</dd>
+        </div>
+        <div>
+          <dt class="label">Study</dt>
+          <dd>B.Tech, Computer Science and Engineering, Karunya Institute of Technology and Sciences <span class="muted">· 2025 to 2029</span></dd>
+        </div>
+        <div>
+          <dt class="label">Before</dt>
+          <dd>Technical Trainee, Google Developer Group on Campus Karunya <span class="muted">· Oct 2025 to Jun 2026</span></dd>
+        </div>
+      </dl>
       <p>
         Every number on this site carries a tag saying how solid it is: <Ev e="measured" />, <Ev e="self-reported" />
         or <Ev e="not yet measured" />. I would rather show you the limits than have you find them.
@@ -246,6 +261,9 @@ const steps = [
 
   .about { margin-top: var(--section); display: grid; grid-template-columns: 1fr 2fr; gap: 24px; }
   .about-text { max-width: 60ch; }
+  .facts { margin: 8px 0 28px; border-top: 1.5px solid var(--ink); }
+  .facts div { padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .facts dd { margin: 4px 0 0; font-size: 16px; }
 
   @media (max-width: 960px) {
     .card-flagship { grid-template-columns: 1fr; }
