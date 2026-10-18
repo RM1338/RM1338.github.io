@@ -8,6 +8,7 @@ role: Sole developer
 dates: Mar to Sep 2026
 stack: [Flutter, Supabase, Edge Functions, Groq Whisper, GPT-OSS]
 links:
+  - { label: "Website", href: "https://getscribe.pages.dev/" }
   - { label: "Repository", href: "https://github.com/RM1338/Scribe" }
   - { label: "Releases", href: "https://github.com/RM1338/Scribe/releases" }
 highlights:

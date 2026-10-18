@@ -23,7 +23,7 @@ const { Story, Try } = stories[entry.id as keyof typeof stories];
 const chapters = ['Imagine', 'The problem', 'The solution', 'My role', 'Under the hood', 'The hard part', 'Results', 'Next'];
 ---
 
-<Base title={`${d.title} · Ronel Abraham Mathew`} description={d.tagline}>
+<Base title={`${d.title} · Ronel Abraham Mathew`} description={d.tagline} image={`/og/${entry.id}.png`}>
   <article class="wrap">
     <header class="head">
       <a class="back" href="/#work">← All work</a>

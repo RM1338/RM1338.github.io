@@ -4,6 +4,7 @@ import Base from '../layouts/Base.astro';
 import { hasResume } from '../lib/site';
 import Ev from '../components/Ev.astro';
 import { figures } from '../components/figures';
+import { contributions } from '../lib/github';
 
 const work = (await getCollection('work')).sort((a, b) => a.data.order - b.data.order);
 const [flagship, ...rest] = work;
@@ -15,6 +16,18 @@ const capabilities = [
 ];
 
 // Every date below is from a repository's git history or a published release.
+const activity = await contributions();
+const level = (n: number) => (n === 0 ? 0 : n < 4 ? 1 : n < 10 ? 2 : n < 25 ? 3 : 4);
+
+// Each tool points at the place on this site that shows it in use; null means used, but not shown here.
+const toolbox: { group: string; items: [string, string | null, string?][] }[] = [
+  { group: 'Languages', items: [['Go', 'Crewbo', '/work/crewbo'], ['Python', 'Gremlin', '/work/gremlin'], ['Dart', 'Scribe', '/work/scribe'], ['TypeScript', 'Crewbo, this site', '/work/crewbo'], ['JavaScript', 'Gremlin console', '/work/gremlin'], ['SQL', 'Scribe', '/work/scribe'], ['C', null]] },
+  { group: 'AI and agents', items: [['Claude Code and Codex hooks', 'Crewbo', '/work/crewbo'], ['MCP servers', 'Crewbo', '/work/crewbo'], ['Whisper', 'Scribe', '/work/scribe'], ['GPT-OSS, Gemini, Qwen3-VL', 'Scribe, Gremlin', '/work/gremlin'], ['Local models with Ollama', 'Gremlin', '/work/gremlin'], ['LangChain, LangGraph, RAG', null]] },
+  { group: 'Apps and web', items: [['Flutter', 'Scribe', '/work/scribe'], ['React', 'Gremlin', '/work/gremlin'], ['FastAPI', 'Gremlin', '/work/gremlin'], ['VS Code extensions', 'Crewbo', '/work/crewbo'], ['Astro', 'this site', '/'], ['Next.js, Tailwind CSS', null]] },
+  { group: 'Data and infrastructure', items: [['SQLite', 'Crewbo', '/work/crewbo'], ['Supabase, PostgreSQL', 'Scribe', '/work/scribe'], ['WebSocket, Protobuf', 'Crewbo', '/work/crewbo'], ['Docker', 'Gremlin sandbox', '/work/gremlin'], ['Linux, dnsmasq, PXE', 'lab rollout post', '#writing'], ['GitHub Actions', 'this site', '/'], ['Redis, Google Cloud', null]] },
+  { group: 'Testing and tooling', items: [['adb, Android emulator', 'Gremlin', '/work/gremlin'], ['Playwright', 'Gremlin', '/work/gremlin'], ['Chrome DevTools Protocol', 'Gremlin', '/work/gremlin'], ['git merge-tree', 'Crewbo', '/work/crewbo']] },
+];
+
 const timeline = [
   { date: 'Mar 2026', what: 'Started Scribe', ev: 'measured' },
   { date: '12 Jul 2026', what: 'Scribe v0.1.0 released on Android', ev: 'measured' },
@@ -110,8 +123,30 @@ const steps = [
     }
   </section>
 
+  <section class="tools wrap" id="toolbox">
+    <p class="label">02 Toolbox</p>
+    <h2>What I build with, and where you can see it.</h2>
+    <div class="tool-grid">
+      {
+        toolbox.map((g) => (
+          <div class="tool-group">
+            <h3 class="label">{g.group}</h3>
+            <ul>
+              {g.items.map(([name, where, href]) => (
+                <li>
+                  <span>{name}</span>
+                  {where ? <a class="mono where" href={href}>{where} →</a> : <span class="mono where muted">used, not shown here</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
   <section class="tl wrap" id="timeline">
-    <p class="label">02 Timeline</p>
+    <p class="label">03 Timeline</p>
     <h2>2026, in order.</h2>
     <ol>
       {
@@ -124,10 +159,24 @@ const steps = [
         ))
       }
     </ol>
+    {
+      activity && (
+        <figure class="activity">
+          <div class="cal" role="img" aria-label={`${activity.total} GitHub contributions in the last year`}>
+            {activity.weeks.map((w) => (
+              <div class="wk">{w.map((d) => <i class={`l${level(d.count)}`} title={`${d.date}: ${d.count}`} />)}</div>
+            ))}
+          </div>
+          <figcaption class="mono">
+            {activity.total.toLocaleString('en')} contributions on <a href="https://github.com/RM1338">GitHub</a> in the last year
+          </figcaption>
+        </figure>
+      )
+    }
   </section>
 
   <section class="writing wrap" id="writing">
-    <p class="label">03 Writing</p>
+    <p class="label">04 Writing</p>
     <h2>Notes from the field.</h2>
     {
       posts.map((p) => (
@@ -143,7 +192,7 @@ const steps = [
   </section>
 
   <section class="how wrap" id="how">
-    <p class="label">04 How I work</p>
+    <p class="label">05 How I work</p>
     <h2>Rules first, then code, then proof.</h2>
     <ol class="steps">
       {
@@ -160,7 +209,7 @@ const steps = [
   </section>
 
   <section class="about wrap" id="about">
-    <p class="label">05 About</p>
+    <p class="label">06 About</p>
     <div class="about-text">
       <p>
         I’m Ronel. I build software that lets AI agents act without asking anyone to trust their judgement. That
@@ -239,6 +288,21 @@ const steps = [
   .hl li::before { content: '– '; color: var(--muted); }
   .card-links { margin-top: auto; padding-top: 8px; display: flex; flex-wrap: wrap; gap: 8px 20px; font-weight: 500; }
 
+  .tools { margin-top: var(--section); }
+  .tools h2 { margin: 16px 0 32px; max-width: 22ch; }
+  .tool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0 32px; }
+  .tool-group { border-top: 1.5px solid var(--ink); padding: 16px 0 24px; }
+  .tool-group h3 { color: var(--ink); margin-bottom: 8px; }
+  .tool-group ul { list-style: none; margin: 0; padding: 0; }
+  .tool-group li { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 16px; }
+  .where { font-size: 12px; text-decoration: none; white-space: nowrap; }
+  a.where { color: var(--accent); }
+  .activity { margin: 32px 0 0; }
+  .cal { display: flex; gap: 3px; overflow-x: auto; padding-bottom: 4px; }
+  .wk { display: grid; grid-template-rows: repeat(7, 11px); gap: 3px; }
+  .wk i { width: 11px; height: 11px; background: var(--line); }
+  .wk i.l1 { background: #ffd2bf; } .wk i.l2 { background: #ffa47f; } .wk i.l3 { background: #ff763f; } .wk i.l4 { background: var(--accent); }
+  .activity figcaption { margin-top: 10px; font-size: 13px; color: var(--muted); }
   .tl { margin-top: var(--section); }
   .tl h2 { margin: 16px 0 32px; }
   .tl ol { list-style: none; margin: 0; padding: 0; border-top: 1.5px solid var(--ink); }
