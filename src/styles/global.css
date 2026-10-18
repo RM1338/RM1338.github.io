@@ -1,0 +1,94 @@
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
+
+:root {
+  --bg: #f3f3f1;
+  --surface: #ffffff;
+  --ink: #141414;
+  --muted: #6b6b6b;
+  --line: #dcdcd8;
+  --accent: #ff5a1f;
+  --ok: #1f8a4c;
+  --warn: #9a5c00;
+  --sans: 'Geist Variable', system-ui, sans-serif;
+  --mono: 'Geist Mono Variable', ui-monospace, monospace;
+  --max: 1280px;
+  --pad: 32px;
+  --section: 160px;
+  color-scheme: light;
+}
+
+
+@media (max-width: 720px) {
+  :root { --pad: 16px; --section: 96px; }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 18px/1.6 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+@media (max-width: 720px) { body { font-size: 16px; } }
+
+a { color: inherit; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+a:hover { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+img { max-width: 100%; height: auto; display: block; }
+
+h1, h2, h3 { margin: 0; line-height: 1.05; }
+h2 { font-size: clamp(28px, 4vw, 40px); font-weight: 700; letter-spacing: -0.02em; }
+h3 { font-size: clamp(20px, 2vw, 22px); font-weight: 600; letter-spacing: -0.01em; }
+p { margin: 0 0 1em; }
+
+.wrap { max-width: var(--max); margin: 0 auto; padding: 0 var(--pad); }
+.label {
+  font: 500 13px/1.4 var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.muted { color: var(--muted); }
+.skip { position: absolute; left: -9999px; }
+.skip:focus { left: 16px; top: 16px; background: var(--ink); color: var(--bg); padding: 8px 12px; z-index: 10; }
+
+/* Evidence tags: the site's motif. Colour follows the claim. */
+.ev {
+  display: inline-block;
+  font: 500 11px/1 var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 6px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+  vertical-align: 2px;
+}
+.ev-measured { color: var(--ok); }
+.ev-self-reported { color: var(--muted); }
+.ev-not-yet-measured { color: var(--warn); }
+
+.status { font: 500 13px/1.4 var(--mono); text-transform: uppercase; letter-spacing: 0.04em; }
+.status::before { content: '●'; margin-right: 6px; }
+.status-live::before { color: var(--ok); }
+.status-preview::before { color: var(--accent); }
+.status-research::before { color: var(--warn); }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  border: 1px solid var(--ink);
+  font-weight: 500;
+  text-decoration: none;
+}
+.btn-solid { background: var(--ink); color: var(--bg); }
+.btn-solid:hover { background: var(--accent); border-color: var(--accent); color: #141414; }
+
+.frame { background: var(--surface); border: 1px solid var(--line); }
+.frame figcaption { padding: 10px 14px; border-top: 1px solid var(--line); }
+figure { margin: 0; }

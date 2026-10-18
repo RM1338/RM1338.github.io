@@ -1,0 +1,189 @@
+---
+import Chapter from './Chapter.astro';
+import scout from '../../assets/nib/nib-explorer.svg?raw';
+import report from '../../assets/nib/nib-trace.svg?raw';
+
+const loop = [
+  ['Observe', 'screenshot and UI tree'],
+  ['Decide', 'vision model picks a tap'],
+  ['Act', 'tap, type, back, scroll'],
+  ['Check', 'read the device log'],
+];
+const gates = ['signal gone on replay', 'screen still looks like itself', 'nothing new broke'];
+---
+
+<Chapter n="01" kicker="Imagine" title="Friday you ship. Monday, a screenshot arrives.">
+  <Fragment slot="panel">
+    <div class="pg" style="grid-template-columns:30cqw 1fr;gap:6cqw">
+      <div class="phone">
+        <span class="bar"></span><span class="bar s"></span>
+        <span class="item"></span><span class="item"></span>
+        <div class="pay"><span>Pay now</span><i class="stripes"></i></div>
+      </div>
+      <div class="col">
+        <div class="bubble">“the pay button is cut off on my phone??”</div>
+        <div class="card">
+          <span><span class="mono">tests passing:</span> <strong>all of them</strong></span>
+          <span><span class="mono">tests for this screen:</span> <strong>none</strong></span>
+        </div>
+      </div>
+    </div>
+    <p class="pcap">illustration</p>
+  </Fragment>
+  <p class="lede">
+    Imagine you ship a Flutter update on Friday. Every test passes. On Monday a user with a small phone sends a
+    screenshot: the checkout button is cut off by yellow and black stripes.
+  </p>
+  <p>
+    Flutter knew. The moment that screen rendered, it printed <code>A RenderFlex overflowed by 42 pixels</code> to the
+    device log. But nobody had written a test that opened that screen, on that size, so nobody was listening.
+  </p>
+</Chapter>
+
+<Chapter n="02" kicker="The problem" title="Every way to test the screens nobody tested is broken in a different way.">
+  <Fragment slot="panel">
+    <div class="pg" style="grid-auto-rows:1fr">
+      <div class="card"><strong>Hand-written UI tests</strong><span class="sub">Cover the screens someone thought of. Break when a widget is renamed.</span></div>
+      <div class="card"><strong>Random tapping (Android’s Monkey)</strong><span class="sub">Needs no script, but cannot form intent: rarely gets past a login or a multi-step flow.</span></div>
+      <div class="card bad"><strong>Asking an AI “does this look broken?”</strong><span class="sub">A question with no checkable answer. It invents bugs, and testers stop trusting it.</span></div>
+    </div>
+  </Fragment>
+  <p>
+    Mobile teams pay for UI testing twice: once to write the tests and again to keep them alive. Random crawlers avoid
+    the writing but wander blind. The newest tools point a language model at a screenshot and ask whether it looks
+    wrong.
+  </p>
+  <p>
+    That last one fails for a structural reason. A false bug report looks exactly like a real one until a human checks
+    it, which brings back the manual cost the tool was meant to remove.
+  </p>
+</Chapter>
+
+<Chapter n="03" kicker="The solution" title="The model decides where to go. The log decides what is broken.">
+  <Fragment slot="panel">
+    <div class="pg" style="grid-template-columns:1fr 1fr;align-items:stretch">
+      <div class="card half">
+        <span class="label-sm">the model</span>
+        <div class="nib" set:html={scout} />
+        <strong>chooses the next tap</strong>
+        <span class="sub">a mistake costs one wasted tap</span>
+      </div>
+      <div class="card half">
+        <span class="label-sm">the log</span>
+        <div class="logline mono">A RenderFlex overflowed by 42 pixels on the right.</div>
+        <strong>says what is broken</strong>
+        <span class="sub">an exact string match, never an opinion</span>
+      </div>
+    </div>
+  </Fragment>
+  <p>
+    Gremlin splits the job in two. A vision model looks at the screen and picks where to tap next, which is a question
+    with no wrong answer, only slower ones. Detection is an exact match on the framework’s own log: overflows, uncaught
+    Dart exceptions, native crashes.
+  </p>
+  <p>
+    Every bug report carries the exact taps that produced it. That one property makes the rest possible: a coding agent
+    can propose a fix, and Gremlin can prove it by rebuilding the app and replaying those taps with nobody watching.
+  </p>
+</Chapter>
+
+<Chapter n="04" kicker="My role" title="I built it, and I keep the ledger of what isn’t proven.">
+  <Fragment slot="panel">
+    <div class="ledger">
+      <div><span>17</span>week research plan, three objectives</div>
+      <div><span>16</span>entries in the defect and method ledger</div>
+      <div><span>10</span>open-source Flutter apps picked; 9 build</div>
+      <div><span>4</span>ways to run: phone, emulator, container, web</div>
+      <div><span>74</span>commits</div>
+    </div>
+  </Fragment>
+  <p>
+    I designed and built Gremlin and wrote its research proposal. I ran it on real devices, chose and built the
+    benchmark apps, and kept a written ledger of every defect and every hole in the evaluation, ranked by how badly
+    each could mislead a result.
+  </p>
+</Chapter>
+
+<Chapter n="05" kicker="Under the hood" title="Observe, decide, act, check. Then three gates.">
+  <Fragment slot="panel">
+    <div class="pg" style="grid-template-columns:repeat(4,1fr);gap:3cqw 4cqw">
+      {
+        loop.map(([t, d]) => (
+          <div class="card step">
+            <strong>{t}</strong>
+            <span class="sub">{d}</span>
+          </div>
+        ))
+      }
+      <span class="label-sm" style="grid-column:1/-1;margin-top:2cqw">a fix must pass all three</span>
+      {
+        gates.map((g, i) => (
+          <div class="card gate" style="grid-column:1/-1">
+            <span><span class="mono">gate {i + 1}</span>&ensp;{g}</span>
+          </div>
+        ))
+      }
+    </div>
+  </Fragment>
+  <ul>
+    <li>
+      <strong>Only four verbs:</strong> tap, type, back and scroll, so any recorded sequence reproduces by construction.
+    </li>
+    <li>
+      <strong>Coverage memory:</strong> Gremlin tracks every control it has tapped on each screen and works through the
+      untapped ones, so it does not loop on one button.
+    </li>
+    <li>
+      <strong>Pluggable model and fixer:</strong> Gemini, Groq or a local Qwen3-VL picks the taps; Claude Code, Codex,
+      Copilot or any command writes the fix. The gates around them never change.
+    </li>
+    <li>
+      <strong>No phone needed:</strong> a headless emulator, a container sandbox on Linux, or a web page through the
+      Chrome DevTools Protocol.
+    </li>
+  </ul>
+</Chapter>
+
+<Chapter n="06" kicker="The hard part" title="The tool went deaf right after its first real find.">
+  <Fragment slot="panel">
+    <div class="pg" style="grid-template-columns:1.7fr 1fr;gap:4cqw">
+      <div class="term">
+<span class="m">step 12</span>  oracle on pid 4121
+<span class="m">step 13</span>  <span class="r">FATAL EXCEPTION</span>
+         bug report filed
+<span class="m">step 13</span>  app restarts: pid 4388
+<span class="m">step 14</span>  oracle on pid 4121
+<span class="m">  …</span>
+<span class="m">step 40</span>  run finished: <span class="g">clean</span></div>
+      <div class="nib" set:html={report} />
+    </div>
+    <p class="pcap">process ids are illustrative</p>
+  </Fragment>
+  <p>
+    The oracle listened to the app’s log by process ID. But any crash it detected killed the app, Android restarted it
+    under a new process ID, and from then on the oracle heard nothing. The run finished normally and called the rest of
+    the app clean.
+  </p>
+  <p>
+    For a tool whose whole job is finding crashes, that meant going deaf exactly when it mattered most. The fix
+    re-checks the process ID on every step, for the cost of one <code>pidof</code> call, and was verified offline
+    against six cases. It is G1 of sixteen entries in the ledger.
+  </p>
+</Chapter>
+
+<style>
+  .bar { height: 2cqw; background: var(--line); }
+  .bar.s { width: 60%; }
+  .item { height: 10cqw; border: 1px solid var(--line); }
+  .pay { margin-top: auto; position: relative; height: 6.4cqw; background: var(--ink); color: var(--bg); font: 600 2.3cqw/6.4cqw var(--sans); padding-left: 2cqw; overflow: hidden; white-space: nowrap; }
+  .stripes { position: absolute; right: 0; top: 0; bottom: 0; width: 7cqw; background: repeating-linear-gradient(45deg, #f5c400 0 1.2cqw, #141414 1.2cqw 2.4cqw); }
+  .col { display: grid; gap: 3cqw; }
+  .bad { border-color: var(--accent); }
+  .card.half { align-items: center; justify-content: space-between; text-align: center; }
+  .nib { width: 100%; max-width: 24cqw; justify-self: center; }
+  .nib :global(svg) { width: 100%; height: auto; display: block; }
+  .logline { background: #141414; color: #ff7b72; padding: 2cqw; font-size: 2.3cqw; text-align: left; }
+  .card.step { height: 17cqw; justify-content: flex-start; position: relative; }
+  .step:not(:nth-child(4))::after { content: '→'; position: absolute; right: -3.6cqw; top: 50%; transform: translateY(-50%); font: 600 3cqw/1 var(--sans); }
+  .gate { padding: 1.6cqw 2.4cqw; }
+</style>

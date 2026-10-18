@@ -1,0 +1,168 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import Ev from '../../components/Ev.astro';
+import Chapter from '../../components/story/Chapter.astro';
+import { figures } from '../../components/figures';
+import { stories } from '../../components/story';
+
+export async function getStaticPaths() {
+  const work = (await getCollection('work')).sort((a, b) => a.data.order - b.data.order);
+  return work.map((entry, i) => ({
+    params: { slug: entry.id },
+    props: { entry, next: work[(i + 1) % work.length] },
+  }));
+}
+
+const { entry, next } = Astro.props;
+const d = entry.data;
+const Figure = figures[entry.id as keyof typeof figures];
+const { Story, Try } = stories[entry.id as keyof typeof stories];
+
+// The same eight chapters on every case study.
+const chapters = ['Imagine', 'The problem', 'The solution', 'My role', 'Under the hood', 'The hard part', 'Results', 'Next'];
+---
+
+<Base title={`${d.title} · Ronel Abraham Mathew`} description={d.tagline}>
+  <article class="wrap">
+    <header class="head">
+      <a class="back" href="/#work">← All work</a>
+      <p class="label">{d.kind}</p>
+      <h1>{d.title}</h1>
+      <p class="tagline">{d.tagline}</p>
+    </header>
+
+    <div class="intro">
+      <div class="fig frame"><Figure /></div>
+      <dl class="glance frame">
+        <div><dt class="label">Status</dt><dd class={`status status-${d.status.tone}`}>{d.status.label}</dd></div>
+        <div><dt class="label">Dates</dt><dd>{d.dates}</dd></div>
+        <div><dt class="label">Role</dt><dd>{d.role}</dd></div>
+        <div><dt class="label">Stack</dt><dd>{d.stack.join(' · ')}</dd></div>
+        <div>
+          <dt class="label">Links</dt>
+          <dd class="links">
+            {d.links.map((l) => (l.href ? <a href={l.href}>{l.label} ↗</a> : <span class="muted">{l.label}</span>))}
+          </dd>
+        </div>
+      </dl>
+    </div>
+
+    <section class="try" id="try">
+      <p class="label">Try it</p>
+      <p class="try-lede">{d.try}</p>
+      <Try />
+    </section>
+
+    <nav class="chapters" aria-label="Chapters">
+      {
+        chapters.map((c, i) => (
+          <a href={`#${c.toLowerCase().replaceAll(' ', '-')}`}>
+            <span>{String(i + 1).padStart(2, '0')}</span> {c}
+          </a>
+        ))
+      }
+    </nav>
+
+    <div class="story">
+      <Story />
+
+      <Chapter n="07" kicker="Results" title="What the evidence says, and where it stops.">
+        <Fragment slot="panel">
+          <div class="results-panel">
+            {
+              d.results.slice(0, 4).map((r) => (
+                <div>
+                  <span class="v">{r.value}</span>
+                  <Ev e={r.evidence} />
+                </div>
+              ))
+            }
+          </div>
+        </Fragment>
+        <ul class="results">
+          {
+            d.results.map((r) => (
+              <li>
+                <strong>{r.value}</strong> {r.label} <Ev e={r.evidence} />
+              </li>
+            ))
+          }
+        </ul>
+        <div class="limits">
+          <p class="label">Limits of this evidence</p>
+          <ul>{d.limits.map((l) => <li>{l}</li>)}</ul>
+        </div>
+      </Chapter>
+
+      <Chapter n="08" kicker="Next" title="Where it goes from here.">
+        <Fragment slot="panel">
+          <a class="next-panel" href={`/work/${next.id}`}>
+            <span class="label">Next case study</span>
+            <span class="next-title">{next.data.title} →</span>
+            <span class="muted">{next.data.tagline}</span>
+          </a>
+        </Fragment>
+        <p>{d.next}</p>
+        <p><a href={`/work/${next.id}`}>Read the {next.data.title} story →</a></p>
+      </Chapter>
+    </div>
+  </article>
+</Base>
+
+<style>
+  .head { padding-top: 24px; }
+  .back { display: inline-block; margin-bottom: 40px; font: 500 14px/1.4 var(--mono); text-decoration: none; }
+  h1 { font-size: clamp(56px, 10vw, 152px); font-weight: 800; letter-spacing: -0.05em; line-height: 0.92; margin-top: 8px; }
+  .tagline { font-size: clamp(20px, 2.4vw, 28px); line-height: 1.35; margin-top: 24px; max-width: 36ch; }
+
+  .intro { display: grid; grid-template-columns: 8fr 4fr; gap: 24px; margin-top: 56px; align-items: start; }
+  .glance { margin: 0; }
+  .glance div { padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .glance div:last-child { border-bottom: 0; }
+  dt { margin-bottom: 4px; }
+  dd { margin: 0; font-size: 15px; }
+  .links { display: flex; flex-wrap: wrap; gap: 6px 20px; }
+
+  .try { margin-top: 96px; }
+  .try-lede { font-size: clamp(20px, 2.2vw, 26px); line-height: 1.35; letter-spacing: -0.01em; max-width: 44ch; margin: 12px 0 24px; }
+
+  .chapters {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    margin-top: 96px;
+    display: flex;
+    gap: 4px 20px;
+    overflow-x: auto;
+    padding: 14px 0;
+    background: var(--bg);
+    border-bottom: 1.5px solid var(--ink);
+    font: 500 12px/1 var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+  }
+  .chapters a { text-decoration: none; color: var(--muted); }
+  .chapters a span { color: var(--ink); }
+  .chapters a:hover { color: var(--accent); }
+
+  .results-panel { position: absolute; inset: 6cqw; display: grid; grid-template-columns: 1fr 1fr; gap: 4cqw; align-content: center; }
+  .results-panel div { display: flex; flex-direction: column; gap: 1.6cqw; align-items: flex-start; border-top: 1.5px solid var(--ink); padding-top: 2cqw; }
+  .results-panel .v { font: 800 8cqw/1 var(--sans); letter-spacing: -0.04em; }
+  .results { list-style: none; padding: 0 !important; }
+  .results li { padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 16px; }
+  .results li + li { margin-top: 0 !important; }
+  .limits { margin-top: 20px; padding: 14px 18px; border-left: 2px solid var(--warn); background: var(--surface); }
+  .limits .label { color: var(--warn); }
+  .limits ul { margin: 8px 0 0; font-size: 15px; }
+
+  .next-panel { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; gap: 2cqw; padding: 8cqw; text-decoration: none; }
+  .next-title { font: 800 11cqw/1 var(--sans); letter-spacing: -0.04em; }
+  .next-panel .muted { font-size: 3cqw; }
+  .next-panel:hover .next-title { color: var(--accent); }
+
+  @media (max-width: 960px) {
+    .intro { grid-template-columns: 1fr; }
+  }
+</style>

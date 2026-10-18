@@ -1,0 +1,140 @@
+---
+// Step through a simulated Gremlin run on an example shop app. The gate lines
+// follow the verified Tier-2 output printed in Gremlin's README.
+import scout from '../../assets/nib/nib-explorer.svg?raw';
+import swat from '../../assets/nib/nib-chaos.svg?raw';
+import report from '../../assets/nib/nib-trace.svg?raw';
+
+const steps = [
+  { screen: 'Home', act: 'launch app', log: 'I/flutter: app started' },
+  { screen: 'Home', act: 'tap “Shop”', log: 'I/flutter: route /shop' },
+  { screen: 'Shop', act: 'tap first product', log: 'I/flutter: route /product/12' },
+  { screen: 'Product', act: 'tap “Add to cart”', log: 'I/flutter: cart items = 1' },
+  { screen: 'Product', act: 'tap cart icon', log: 'I/flutter: route /cart' },
+  { screen: 'Cart', act: 'tap “Checkout”', log: 'I/flutter: route /checkout' },
+  { screen: 'Checkout', act: 'screen settles', log: 'A RenderFlex overflowed by 42 pixels on the right.', bug: true },
+];
+const gates = [
+  'gate signal-gone        pass — target signal absent on replay',
+  'gate screen-looks-same  pass — perceptual distance 18 (<= 32)',
+  'gate no-new-breakage    pass — no new signals introduced',
+];
+---
+
+<div class="run" data-gremlin-run data-steps={JSON.stringify(steps)} data-gates={JSON.stringify(gates)}>
+  <div class="left">
+    <div class="phone">
+      <p class="mono screen" data-screen>Home</p>
+      <div class="bar"></div><div class="bar s"></div><div class="blk"></div>
+      <div class="cta"><span data-cta>Continue</span><i class="stripes" data-stripes></i></div>
+    </div>
+    <div class="nib">
+      <div class="pose" data-pose="scout" set:html={scout} />
+      <div class="pose" data-pose="swat" hidden set:html={swat} />
+      <div class="pose" data-pose="report" hidden set:html={report} />
+    </div>
+  </div>
+  <div class="mid">
+    <div class="btns">
+      <button type="button" class="solid" data-next>Next tap</button>
+      <button type="button" class="solid" data-fix hidden>Try the fix</button>
+      <button type="button" data-reset>Reset</button>
+    </div>
+    <p class="label">Trace · every step is recorded</p>
+    <ol class="trace mono" data-trace></ol>
+  </div>
+  <div class="right" aria-live="polite">
+    <p class="label">Device log · the oracle</p>
+    <pre class="log" data-log></pre>
+  </div>
+  <p class="note mono">Simulated run on an example app, for illustration. Gate lines match a real verified run.</p>
+</div>
+
+<script>
+  type Step = { screen: string; act: string; log: string; bug?: boolean };
+  for (const root of document.querySelectorAll<HTMLElement>('[data-gremlin-run]')) {
+    const steps: Step[] = JSON.parse(root.dataset.steps!);
+    const gates: string[] = JSON.parse(root.dataset.gates!);
+    const $ = <T extends HTMLElement>(s: string) => root.querySelector<T>(s)!;
+    const trace = $('[data-trace]'), log = $('[data-log]'), next = $<HTMLButtonElement>('[data-next]'), fix = $<HTMLButtonElement>('[data-fix]');
+    const keepEnd = () => { trace.scrollTop = trace.scrollHeight; log.scrollTop = log.scrollHeight; };
+    new MutationObserver(keepEnd).observe(root, { childList: true, subtree: true, characterData: true });
+    const pose = (p: string) => root.querySelectorAll<HTMLElement>('[data-pose]').forEach((el) => (el.hidden = el.dataset.pose !== p));
+    let i = 0;
+
+    const reset = () => {
+      i = 0;
+      trace.innerHTML = '';
+      log.textContent = 'watching for: RenderFlex overflowed · uncaught exceptions · FATAL EXCEPTION';
+      $('[data-screen]').textContent = 'Home';
+      $('[data-cta]').textContent = 'Continue';
+      $('[data-stripes]').classList.remove('on');
+      next.hidden = false;
+      fix.hidden = true;
+      pose('scout');
+    };
+    next.addEventListener('click', () => {
+      const s = steps[i++];
+      const li = document.createElement('li');
+      li.textContent = s.act;
+      trace.append(li);
+      $('[data-screen]').textContent = s.screen;
+      if (s.screen === 'Checkout') $('[data-cta]').textContent = 'Pay now';
+      log.insertAdjacentHTML('beforeend', `\n${s.bug ? `<span class="bad">${s.log}</span>` : s.log}`);
+      if (s.bug) {
+        $('[data-stripes]').classList.add('on');
+        pose('swat');
+        log.insertAdjacentHTML('beforeend', `\n\n<span class="ok">bug report filed: renderflex-overflow\nscreenshot + log line + ${i} steps to reproduce</span>`);
+        next.hidden = true;
+        fix.hidden = false;
+        fix.focus({ preventScroll: true });
+      }
+    });
+    fix.addEventListener('click', () => {
+      fix.hidden = true;
+      pose('report');
+      log.insertAdjacentHTML('beforeend', `\n\n$ python -m gremlin.autofix --backend claude\nrebuilding, replaying all ${steps.length} steps…`);
+      gates.forEach((g, k) =>
+        setTimeout(() => {
+          log.insertAdjacentHTML('beforeend', `\n${g}`);
+          if (k === gates.length - 1) {
+            $('[data-stripes]').classList.remove('on');
+            log.insertAdjacentHTML('beforeend', `\n<span class="ok">[VERIFIED ✓] left on a branch for a human to review</span>`);
+          }
+        }, 700 * (k + 1)),
+      );
+    });
+    $('[data-reset]').addEventListener('click', reset);
+    reset();
+  }
+</script>
+
+<style>
+  .run { display: grid; grid-template-columns: 1fr 1fr 1.4fr; border: 1.5px solid var(--ink); background: var(--surface); }
+  .run > div { padding: 20px; min-width: 0; }
+  .run > div + div { border-left: 1px solid var(--line); }
+  .left { display: flex; gap: 8px; align-items: flex-end; justify-content: center; }
+  .phone { width: 130px; height: 240px; border: 6px solid #2b2b2b; border-radius: 18px; padding: 14px 10px; display: flex; flex-direction: column; gap: 8px; background: var(--bg); flex: none; }
+  .screen { margin: 0; font-size: 12px; font-weight: 600; }
+  .bar { height: 8px; background: var(--line); }
+  .bar.s { width: 60%; }
+  .blk { height: 60px; border: 1px solid var(--line); }
+  .cta { margin-top: auto; position: relative; height: 30px; background: var(--ink); color: var(--bg); font: 600 12px/30px var(--sans); padding-left: 8px; overflow: hidden; white-space: nowrap; }
+  .stripes { position: absolute; right: 0; top: 0; bottom: 0; width: 0; background: repeating-linear-gradient(45deg, #f5c400 0 5px, #141414 5px 10px); transition: width 0.3s; }
+  .stripes:global(.on) { width: 30px; }
+  .nib { width: 110px; flex: none; }
+  .nib :global(svg) { width: 100%; height: auto; display: block; }
+  .trace { margin: 12px 0 0; padding: 0 0 0 22px; font-size: 13px; height: 190px; overflow-y: auto; }
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; min-height: 40px; }
+  .btns button { padding: 9px 16px; border-radius: 999px; border: 1px solid var(--ink); background: transparent; font: 500 14px var(--sans); cursor: pointer; color: var(--ink); }
+  .btns .solid { background: var(--ink); color: var(--bg); }
+  .btns button:hover { background: var(--accent); border-color: var(--accent); color: #141414; }
+  .log { margin: 12px 0 0; background: #141414; color: #cfcfca; padding: 14px; height: 300px; overflow-y: auto; font: 12px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .log :global(.bad) { color: #ff7b72; }
+  .log :global(.ok) { color: #7ee2a8; }
+  .note { grid-column: 1 / -1; margin: 0; padding: 10px 20px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+  @media (max-width: 960px) {
+    .run { grid-template-columns: 1fr; }
+    .run > div + div { border-left: 0; border-top: 1px solid var(--line); }
+  }
+</style>

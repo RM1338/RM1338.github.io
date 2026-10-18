@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 286" width="240" height="285.59999999999997" class="nib nib-success " role="img" aria-label="Gremlin mascot, success"><style>
+        /* fill-box ONLY on the elements whose keyframes use percentage origins.
+           As a bare descendant selector it also re-based every plain transform
+           attribute in the drawing, which is what detached the mitts from the
+           wrists and threw the tip off the tail. (No backticks in here: this
+           block is a template literal.) */
+        .nib-body, .nib-chest, .nib-head, .nib-lids,
+        .nib-earL, .nib-earR, .nib-tail, .nib-jab,
+        .nib-swat, .nib-wing,
+        .nib-spark path { transform-box: fill-box; }
+
+        /* Natural idle motion is never one axis. The body travels a shallow
+           figure-of-eight — up, across, down, back — while squashing on the low
+           beat and stretching at the top. The head runs the SAME cycle a beat
+           late, which is follow-through: the bit that stops it looking rigid. */
+        .nib-body  { animation: nib-idle 4.2s ease-in-out infinite; transform-origin:50% 100%; }
+        .nib-chest { animation: nib-squash 4.2s ease-in-out infinite; transform-origin:50% 100%; }
+        .nib-head  { animation: nib-follow 4.2s ease-in-out infinite; animation-delay:-.28s; transform-origin:50% 100%; }
+        .nib-lids  { animation: nib-blink 5.6s infinite; transform-origin:50% 50%; }
+        .nib-earL  { animation: nib-earL 4.2s ease-in-out infinite; animation-delay:-.42s; transform-origin:90% 95%; }
+        .nib-earR  { animation: nib-earR 4.2s ease-in-out infinite; animation-delay:-.42s; transform-origin:10% 95%; }
+        .nib-tail  { animation: nib-tail 3.2s ease-in-out infinite; transform-origin:0% 100%; }
+
+        .nib-jab   { animation: nib-jab 0.9s ease-in-out infinite; transform-origin:50% 0%; }
+        .nib-scan  { animation: nib-scan 2.4s ease-in-out infinite; }
+
+        /* chaos is Nib fighting off actual bugs, so the energy belongs to the
+           bugs and the swatting arm — not to the body. Winding the whole figure
+           up made it look deranged rather than busy. */
+        .nib-chaos .nib-body,
+        .nib-chaos .nib-chest,
+        .nib-chaos .nib-head { animation-duration: 2.1s; }
+        .nib-chaos .nib-tail { animation-duration: 0.9s; }
+        .nib-chaos .nib-earL,
+        .nib-chaos .nib-earR { animation-duration: 1.1s; }
+        .nib-swat { animation: nib-swat 0.62s ease-in-out infinite; transform-origin:50% 0%; }
+
+        /* Each bug flies its own wandering loop; the durations are deliberately
+           not multiples of each other so the swarm never syncs up. */
+        .nib-bug  { animation: nib-fly 3s ease-in-out infinite; }
+        .nib-wing { animation: nib-buzz 0.11s linear infinite; transform-origin:100% 60%; }
+
+        @keyframes nib-idle {
+          0%   { transform: translate(0,0)      rotate(0deg) }
+          25%  { transform: translate(2.5px,0)  rotate(-1.6deg) }
+          50%  { transform: translate(0,0)      rotate(0deg) }
+          75%  { transform: translate(-2.5px,0) rotate(1.6deg) }
+          100% { transform: translate(0,0)      rotate(0deg) }
+        }
+        /* Asleep in a chair: no sway at all, just breathing, and the head
+           nods over. The .nib-idle selector here is the STATE class, not the
+           keyframe of the same name — the two-class selector wins.
+           (No backticks in this block: it is a template literal.) */
+        .nib-idle .nib-body { animation: nib-breathe 5.4s ease-in-out infinite; }
+        .nib-idle .nib-head { animation: nib-doze 5.4s ease-in-out infinite; }
+        .nib-idle .nib-earL, .nib-idle .nib-earR { animation-duration: 6.5s; }
+        .nib-idle .nib-lids { animation: none; }
+        @keyframes nib-breathe {
+          0%,100% { transform: scale(1, 1) }
+          50%     { transform: scale(1.012, 0.988) }
+        }
+        @keyframes nib-doze {
+          0%,100% { transform: rotate(-7deg) translateY(0) }
+          50%     { transform: rotate(-9deg) translateY(2px) }
+        }
+        @keyframes nib-zzz {
+          0%   { transform: translate(0,0) scale(.75); opacity: 0 }
+          20%  { opacity: 1 }
+          70%  { opacity: .85 }
+          100% { transform: translate(9px,-26px) scale(1.1); opacity: 0 }
+        }
+        .nib-zzz text { animation: nib-zzz 3.4s ease-out infinite; }
+        @keyframes nib-squash {
+          0%,100% { transform: scale(1.035, 0.965) }
+          50%     { transform: scale(0.975, 1.03) }
+        }
+        @keyframes nib-follow {
+          0%   { transform: rotate(0deg) translateY(0) }
+          25%  { transform: rotate(-3deg) translateY(-1px) }
+          50%  { transform: rotate(0deg) translateY(-2px) }
+          75%  { transform: rotate(3deg) translateY(-1px) }
+          100% { transform: rotate(0deg) translateY(0) }
+        }
+        @keyframes nib-swat {
+          0%,100% { transform: rotate(0deg) }
+          35%     { transform: rotate(24deg) translate(-2px,6px) }
+          60%     { transform: rotate(-6deg) }
+        }
+        @keyframes nib-fly {
+          0%   { transform: translate(0,0)         rotate(0deg) }
+          18%  { transform: translate(15px,-13px)  rotate(14deg) }
+          36%  { transform: translate(-9px,-25px)  rotate(-16deg) }
+          55%  { transform: translate(-24px,-8px)  rotate(9deg) }
+          74%  { transform: translate(-6px,12px)   rotate(-11deg) }
+          88%  { transform: translate(11px,5px)    rotate(6deg) }
+          100% { transform: translate(0,0)         rotate(0deg) }
+        }
+        @keyframes nib-buzz { 0%,100%{transform:scaleY(1)} 50%{transform:scaleY(0.25)} }
+        @keyframes nib-tail { 0%,100%{transform:rotate(-7deg)} 50%{transform:rotate(11deg)} }
+        @keyframes nib-earL { 0%,100%{transform:rotate(0)} 30%{transform:rotate(-6deg)} 70%{transform:rotate(3deg)} }
+        @keyframes nib-earR { 0%,100%{transform:rotate(0)} 30%{transform:rotate(6deg)} 70%{transform:rotate(-3deg)} }
+        @keyframes nib-blink   { 0%,93%,100%{transform:scaleY(1)} 96%{transform:scaleY(0.08)} }
+        @keyframes nib-jab     { 0%,100%{transform:translate(0,0) rotate(0)} 50%{transform:translate(4px,8px) rotate(9deg)} }
+        @keyframes nib-scan    { 0%,100%{opacity:.55} 50%{opacity:1} }
+        @keyframes nib-pop     { 0%,100%{transform:scale(.5);opacity:0} 45%{transform:scale(1);opacity:.95} }
+        .nib-spark path { animation: nib-pop 1.5s ease-in-out infinite; transform-origin:50% 50%; }
+
+        /* The stopwatch runs in steps rather than a smooth sweep — a mechanical
+           tick reads as timing something, a glide reads as decoration. */
+        .nib-tick { animation: nib-tick 3s steps(12) infinite; transform-origin: 44px 132px; }
+        @keyframes nib-tick { to { transform: rotate(360deg) } }
+
+        @media (prefers-reduced-motion: reduce) { .nib, .nib * { animation: none !important; } }
+      </style><ellipse cx="120" cy="258" rx="58" ry="9" fill="#12211E" opacity="0.16"></ellipse><g class="nib-body"><g class="nib-tail"><path d="M148 214 q44 10 52 -30" fill="none" stroke="#24504A" stroke-width="14" stroke-linecap="round"></path><path d="M200 152 q16 16 15 29 q-9 -6 -15 5 q-6 -11 -15 -5 q-1 -13 15 -29 Z" fill="#24504A"></path></g><g><rect x="86" y="206" width="27" height="40" rx="13" fill="#2A554D"></rect><path d="M81 244 q18 -8 37 0 q0 9 -8 10 l-21 0 q-8 -1 -8 -10 Z" fill="#20443E"></path><path d="M89 254 l3 6 3 -6 Z" fill="#173430"></path><path d="M98 254 l3 6 3 -6 Z" fill="#173430"></path><path d="M107 254 l3 6 3 -6 Z" fill="#173430"></path></g><g><rect x="128" y="206" width="27" height="40" rx="13" fill="#2A554D"></rect><path d="M123 244 q18 -8 37 0 q0 9 -8 10 l-21 0 q-8 -1 -8 -10 Z" fill="#20443E"></path><path d="M131 254 l3 6 3 -6 Z" fill="#173430"></path><path d="M140 254 l3 6 3 -6 Z" fill="#173430"></path><path d="M149 254 l3 6 3 -6 Z" fill="#173430"></path></g><path d="M84 158 q36 -13 72 0 q9 33 2 58 q-38 15 -76 0 q-7 -25 2 -58 Z" fill="#2F6055"></path><path d="M84 158 q-9 33 -2 58 q11 4 18 5 q-15 -31 -6 -63 Z" fill="#20443E" opacity="0.6"></path><ellipse cx="120" cy="194" rx="24" ry="23" fill="#4E8E7B"></ellipse><g class=""><path d="M86 164 q-30 16 -18 32" stroke="#2A554D" stroke-width="21" stroke-linecap="round" fill="none"></path><path d="M86 164 q-30 16 -18 32" stroke="#3E7A6B" stroke-width="13" stroke-linecap="round" fill="none" opacity="0.5"></path><g transform="translate(68 197) rotate(-22)"><ellipse cx="0" cy="0" rx="14.5" ry="13" fill="#3E7A6B"></ellipse><circle cx="8.5" cy="10" r="4.6" fill="#357062"></circle><circle cx="0" cy="10" r="4.6" fill="#357062"></circle><circle cx="-8.5" cy="10" r="4.6" fill="#357062"></circle></g></g><g class=""><path d="M154 164 q36 -6 42 -32" stroke="#2A554D" stroke-width="21" stroke-linecap="round" fill="none"></path><path d="M154 164 q36 -6 42 -32" stroke="#3E7A6B" stroke-width="13" stroke-linecap="round" fill="none" opacity="0.5"></path><g transform="translate(196 130) rotate(-14)"><circle cx="0" cy="0" r="19" fill="#46E08B" opacity="0.22"></circle><circle cx="0" cy="0" r="14" fill="#3E7A6B"></circle></g></g><g class="nib-spark"><path transform="translate(34 132)" fill="#46E08B" opacity="0.9" style="animation-delay:0s" d="M0 -8 Q2.24 -2.24 8 0 Q2.24 2.24 0 8
+                  Q-2.24 2.24 -8 0 Q-2.24 -2.24 0 -8 Z"></path><path transform="translate(208 126)" fill="#46E08B" opacity="0.9" style="animation-delay:0.22s" d="M0 -7 Q1.9600000000000002 -1.9600000000000002 7 0 Q1.9600000000000002 1.9600000000000002 0 7
+                  Q-1.9600000000000002 1.9600000000000002 -7 0 Q-1.9600000000000002 -1.9600000000000002 0 -7 Z"></path><path transform="translate(120 18)" fill="#46E08B" opacity="0.9" style="animation-delay:0.44s" d="M0 -6 Q1.6800000000000002 -1.6800000000000002 6 0 Q1.6800000000000002 1.6800000000000002 0 6
+                  Q-1.6800000000000002 1.6800000000000002 -6 0 Q-1.6800000000000002 -1.6800000000000002 0 -6 Z"></path><path transform="translate(46 198)" fill="#46E08B" opacity="0.9" style="animation-delay:0.66s" d="M0 -5 Q1.4000000000000001 -1.4000000000000001 5 0 Q1.4000000000000001 1.4000000000000001 0 5
+                  Q-1.4000000000000001 1.4000000000000001 -5 0 Q-1.4000000000000001 -1.4000000000000001 0 -5 Z"></path></g><g class="nib-head"><g class="nib-earL"><path d="M64 84 q-34 -30 -44 -68 q34 8 56 36 q10 14 12 30 Z" fill="#2A554D"></path><path d="M64 78 q-25 -23 -33 -50 q24 8 39 26 q8 11 10 22 Z" fill="#B87A72" opacity="0.8"></path></g><g class="nib-earR"><path d="M176 84 q34 -30 44 -68 q-34 8 -56 36 q-10 14 -12 30 Z" fill="#2A554D"></path><path d="M176 78 q25 -23 33 -50 q-24 8 -39 26 q-8 11 -10 22 Z" fill="#B87A72" opacity="0.8"></path></g><path d="M56 96 q0 -58 64 -58 q64 0 64 58 q0 42 -22 56 q-17 11 -42 11
+                   q-25 0 -42 -11 q-22 -14 -22 -56 Z" fill="#35695F"></path><path d="M56 96 q0 42 22 56 q8 5 18 8 q-30 -30 -24 -80 q-16 6 -16 16 Z" fill="#20443E" opacity="0.55"></path><g><path d="M76 104 q18 -20 36 0" fill="none" stroke="#1B3B36" stroke-width="7" stroke-linecap="round"></path><path d="M128 104 q18 -20 36 0" fill="none" stroke="#1B3B36" stroke-width="7" stroke-linecap="round"></path><path d="M100 130 q20 22 40 0 q-20 8 -40 0 Z" fill="#2E2018"></path></g></g></g></svg>

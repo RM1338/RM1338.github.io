@@ -1,0 +1,118 @@
+---
+// A small 3D diorama: a plinth carrying the project's brand on its front, with
+// flat actors (mascots, cards) standing on it at different depths. All sizes are
+// in cqw so the scene scales with its container. Pointer tilt is the only script.
+interface Props {
+  label: string;
+}
+const { label } = Astro.props;
+---
+
+<div class="stage" role="img" aria-label={label} data-stage>
+  <div class="scene">
+    <div class="floor"><slot name="floor" /></div>
+    <div class="front"><slot name="brand" /></div>
+    <div class="side"></div>
+    <slot />
+  </div>
+</div>
+
+<script>
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!still) {
+    for (const el of document.querySelectorAll<HTMLElement>('[data-stage]')) {
+      el.addEventListener('pointermove', (e) => {
+        const r = el.getBoundingClientRect();
+        const px = (e.clientX - r.left) / r.width - 0.5;
+        const py = (e.clientY - r.top) / r.height - 0.5;
+        el.style.setProperty('--ry', `${-16 + px * 22}deg`);
+        el.style.setProperty('--rx', `${-14 + py * 8}deg`);
+      });
+      el.addEventListener('pointerleave', () => {
+        el.style.removeProperty('--ry');
+        el.style.removeProperty('--rx');
+      });
+    }
+  }
+</script>
+
+<style>
+  .stage {
+    container-type: inline-size;
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    perspective: 220cqw;
+    perspective-origin: 50% 30%;
+    background:
+      radial-gradient(60% 50% at 50% 45%, var(--surface), transparent 70%),
+      var(--bg);
+  }
+  .scene {
+    position: absolute;
+    inset: 0;
+    transform-style: preserve-3d;
+    transform: translateY(-19cqw) rotateX(var(--rx, -14deg)) rotateY(var(--ry, -16deg));
+    transition: transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  /* The floor line sits at 50cqw; the floor extends 30cqw toward the viewer. */
+  .floor {
+    position: absolute;
+    left: 12cqw;
+    width: 76cqw;
+    top: 50cqw;
+    height: 30cqw;
+    transform-origin: top center;
+    transform: rotateX(90deg);
+    transform-style: preserve-3d;
+    background:
+      repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 6cqw),
+      repeating-linear-gradient(0deg, var(--line) 0 1px, transparent 1px 6cqw),
+      var(--surface);
+    border: 1px solid var(--line);
+  }
+  .front {
+    position: absolute;
+    left: 12cqw;
+    width: 76cqw;
+    top: 50cqw;
+    height: 7cqw;
+    transform: translateZ(30cqw);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.4cqw;
+    font: 600 2.6cqw/1 var(--sans);
+    letter-spacing: -0.01em;
+  }
+  .side {
+    position: absolute;
+    left: 88cqw;
+    width: 30cqw;
+    top: 50cqw;
+    height: 7cqw;
+    transform-origin: left center;
+    transform: rotateY(-90deg);
+    background: #e2e2de;
+    border: 1px solid var(--line);
+  }
+  /* Actors: children placed with --x (centre, cqw), --z (depth, cqw), --w (width, cqw). */
+  .stage :global(.actor) {
+    position: absolute;
+    left: calc(var(--x) * 1cqw);
+    bottom: calc(100% - 50cqw);
+    width: calc(var(--w) * 1cqw);
+    transform: translateX(-50%) translateZ(calc(var(--z) * 1cqw));
+    transform-style: preserve-3d;
+    filter: drop-shadow(0 1.2cqw 1cqw rgb(0 0 0 / 0.16));
+  }
+  .stage :global(.actor svg),
+  .stage :global(.actor img) { display: block; width: 100%; height: auto; }
+  @media (prefers-reduced-motion: reduce) {
+    .scene { transition: none; }
+    .stage :global(*) { animation: none !important; }
+  }
+</style>

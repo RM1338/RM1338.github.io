@@ -1,0 +1,174 @@
+---
+// Try Crewbo: pick whose agent you drive, try to edit files, ask for a hand-off.
+// The refusal text follows denyReason() in crewbo internal/hooks/run.go.
+import { boSVG, TEAM_COLORS } from '../../lib/crewbo/bo.js';
+import '../../lib/crewbo/bo.css';
+
+const [cobalt, teal, , ember] = TEAM_COLORS;
+const agents = [
+  { id: 'riya', c: cobalt.base },
+  { id: 'dev', c: teal.base },
+  { id: 'maya', c: ember.base },
+];
+const files = [
+  { path: 'src/auth/session.ts', holder: 'riya' },
+  { path: 'src/api/limits.ts', holder: 'dev' },
+  { path: 'emails/welcome.md', holder: '' },
+  { path: 'README.md', holder: '' },
+];
+const colors = Object.fromEntries(agents.map((a) => [a.id, a.c]));
+---
+
+<div class="sim" data-crewbo-sim data-colors={JSON.stringify(colors)}>
+  <div class="who">
+    <p class="label">You are driving</p>
+    <div class="agents" role="radiogroup" aria-label="Choose whose agent you drive">
+      {
+        agents.map((a, i) => (
+          <button type="button" role="radio" aria-checked={i === 2 ? 'true' : 'false'} data-agent={a.id}>
+            <span class="face idle" set:html={boSVG({ state: 'idle', color: a.c, size: 100 })} />
+            <span class="face conflict" set:html={boSVG({ state: 'conflict', color: a.c, size: 100 })} />
+            <span class="face merged" set:html={boSVG({ state: 'merged', color: a.c, size: 100 })} />
+            <span class="mono">{a.id}’s agent</span>
+          </button>
+        ))
+      }
+    </div>
+  </div>
+
+  <div class="files">
+    <p class="label">Files in the room · click one to edit it</p>
+    <ul>
+      {
+        files.map((f) => (
+          <li>
+            <button type="button" data-path={f.path} data-holder={f.holder}>
+              <span class="mono path">{f.path}</span>
+              <span class="mono hold" />
+            </button>
+          </li>
+        ))
+      }
+    </ul>
+    <button type="button" class="handoff" data-handoff>Ask for a hand-off</button>
+  </div>
+
+  <div class="log" aria-live="polite">
+    <p class="label">What the agent is told</p>
+    <pre data-log>Pick a file. Your agent’s hook asks Crewbo before every edit.</pre>
+  </div>
+</div>
+
+<script>
+  for (const root of document.querySelectorAll<HTMLElement>('[data-crewbo-sim]')) {
+    const colors: Record<string, string> = JSON.parse(root.dataset.colors!);
+    const log = root.querySelector<HTMLElement>('[data-log]')!;
+    const handoff = root.querySelector<HTMLButtonElement>('[data-handoff]')!;
+    const fileBtns = [...root.querySelectorAll<HTMLButtonElement>('[data-path]')];
+    const agentBtns = [...root.querySelectorAll<HTMLButtonElement>('[data-agent]')];
+    let me = 'maya';
+    let blocked: HTMLButtonElement | null = null;
+    const lease = () => {
+      const d = new Date(Date.now() + 5 * 60_000);
+      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    };
+
+    const paint = () => {
+      for (const b of fileBtns) {
+        const h = b.dataset.holder!;
+        b.style.setProperty('--c', h ? colors[h] : 'transparent');
+        b.querySelector('.hold')!.textContent = h ? `claimed · ${h}` : 'free';
+      }
+      for (const b of agentBtns) b.setAttribute('aria-checked', String(b.dataset.agent === me));
+    };
+    const mood = (state: string) => {
+      const b = agentBtns.find((x) => x.dataset.agent === me)!;
+      b.dataset.mood = state;
+      // Re-insert so the one-shot conflict shake and merged bob replay.
+      for (const f of b.querySelectorAll<HTMLElement>('.face')) f.replaceWith(f.cloneNode(true));
+    };
+
+    agentBtns.forEach((b) =>
+      b.addEventListener('click', () => {
+        me = b.dataset.agent!;
+        blocked = null;
+        handoff.classList.remove('on');
+        agentBtns.forEach((x) => delete x.dataset.mood);
+        log.textContent = `You are driving ${me}’s agent.`;
+        paint();
+      }),
+    );
+
+    fileBtns.forEach((b) =>
+      b.addEventListener('click', () => {
+        const path = b.dataset.path!;
+        const h = b.dataset.holder!;
+        if (h && h !== me) {
+          blocked = b;
+          handoff.classList.add('on');
+          handoff.textContent = `Ask ${h} to hand over ${path}`;
+          log.innerHTML = `<span class="deny">✕ edit refused</span>\n${path} is claimed by ${h}’s agent until at least ${lease()} (Crewbo). Work on other files, or ask them to hand it over: crewbo claim request ${path}`;
+          mood('conflict');
+        } else {
+          if (!h) b.dataset.holder = me;
+          blocked = null;
+          handoff.classList.remove('on');
+          log.innerHTML = `<span class="ok">✓ edit allowed</span>\n${h ? `${me}’s agent already holds ${path}.` : `${path} was free, so it is now claimed by ${me}’s agent. Teammates’ agents will be refused.`}`;
+          mood('idle');
+        }
+        paint();
+      }),
+    );
+
+    handoff.addEventListener('click', () => {
+      if (!blocked) return;
+      const b = blocked;
+      const from = b.dataset.holder!;
+      handoff.classList.remove('on');
+      log.innerHTML = `$ crewbo claim request ${b.dataset.path}\nwaiting for ${from}…`;
+      setTimeout(() => {
+        b.dataset.holder = me;
+        blocked = null;
+        log.innerHTML = `<span class="ok">✓ ${from} handed it over</span>\n${b.dataset.path} is now claimed by ${me}’s agent. The hand-off is logged for the room.`;
+        mood('merged');
+        paint();
+      }, 1200);
+    });
+
+    paint();
+  }
+</script>
+
+<style>
+  .sim { display: grid; grid-template-columns: 1fr 1.2fr 1.3fr; gap: 0; border: 1.5px solid var(--ink); background: var(--surface); }
+  .sim > div { padding: 20px; min-width: 0; }
+  .sim > div + div { border-left: 1px solid var(--line); }
+  .agents { display: grid; gap: 8px; margin-top: 12px; }
+  .agents button { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border: 1px solid var(--line); background: var(--bg); cursor: pointer; font: inherit; text-align: left; color: var(--ink); }
+  .agents button[aria-checked='true'] { border-color: var(--ink); background: var(--surface); box-shadow: inset 3px 0 0 var(--accent); }
+  .face { width: 36px; height: 36px; display: none; }
+  .face :global(svg) { width: 100%; height: 100%; }
+  button:not([data-mood]) .face.idle, button[data-mood='idle'] .face.idle,
+  button[data-mood='conflict'] .face.conflict, button[data-mood='merged'] .face.merged { display: block; }
+  .files ul { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+  .files li button {
+    width: 100%; display: flex; justify-content: space-between; gap: 8px; align-items: center;
+    padding: 10px 12px; border: 1px solid var(--line); border-left: 4px solid var(--c, transparent);
+    background: var(--bg); cursor: pointer; font: inherit; color: var(--ink); text-align: left;
+  }
+  .files li button:hover { border-color: var(--ink); border-left-color: var(--c, var(--ink)); }
+  .path { font-size: 13px; overflow-wrap: anywhere; }
+  .hold { font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .handoff { visibility: hidden; margin-top: 12px; padding: 10px 16px; border-radius: 999px; border: 1px solid var(--ink); background: var(--ink); color: var(--bg); font: 500 14px var(--sans); cursor: pointer; }
+  .handoff:hover { background: var(--accent); border-color: var(--accent); color: #141414; }
+  .handoff:global(.on) { visibility: visible; }
+  .log pre { margin: 12px 0 0; background: #141414; color: #e8e8e4; padding: 14px; height: 170px; overflow-y: auto; font: 13px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .log :global(.deny) { color: #ff7b72; }
+  .log :global(.ok) { color: #7ee2a8; }
+  @media (max-width: 960px) {
+    .sim { grid-template-columns: 1fr; }
+    .sim > div + div { border-left: 0; border-top: 1px solid var(--line); }
+    .agents { grid-template-columns: repeat(3, 1fr); }
+    .agents button { flex-direction: column; text-align: center; font-size: 12px; }
+  }
+</style>

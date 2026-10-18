@@ -1,0 +1,76 @@
+---
+import '../styles/global.css';
+import { hasResume } from '../lib/site';
+
+interface Props {
+  title: string;
+  description: string;
+}
+const { title, description } = Astro.props;
+const email = 'rma80070@gmail.com';
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={new URL(Astro.url.pathname, Astro.site)} />
+    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+    <meta name="theme-color" content="#f3f3f1" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="nav wrap">
+      <a class="name" href="/">Ronel Abraham Mathew</a>
+      <nav aria-label="Main">
+        <a href="/#work">Work</a>
+        <a href="/#about">About</a>
+        {hasResume && <a href="/resume.pdf" target="_blank" rel="noopener">Résumé ↗</a>}
+        <a class="hide-sm" href="https://github.com/RM1338" rel="me">GitHub</a>
+        <a class="hide-sm" href="https://www.linkedin.com/in/ronelm" rel="me">LinkedIn</a>
+      </nav>
+    </header>
+    <main id="main">
+      <slot />
+    </main>
+    <footer class="foot wrap" id="contact">
+      <p class="label">Contact</p>
+      <p class="foot-cta">Let's talk: <a href={`mailto:${email}`}>{email}</a></p>
+      <p class="foot-links">
+        <a href="https://github.com/RM1338" rel="me">GitHub · RM1338</a>
+        <a href="https://www.linkedin.com/in/ronelm" rel="me">LinkedIn · ronelm</a>
+        <a href="https://medium.com/@ronelmathew" rel="me">Medium · ronelmathew</a>
+        {hasResume && <a href="/resume.pdf" target="_blank" rel="noopener">Résumé ↗</a>}
+      </p>
+    </footer>
+  </body>
+</html>
+
+<style>
+  .nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+  }
+  .name { font-weight: 600; text-decoration: none; letter-spacing: -0.01em; }
+  nav { display: flex; gap: 20px; font-size: 15px; }
+  nav a { text-decoration: none; }
+  @media (max-width: 720px) {
+    .hide-sm { display: none; }
+    nav { gap: 14px; }
+    .name { font-size: 15px; }
+  }
+  .foot { padding-top: 64px; padding-bottom: 48px; margin-top: var(--section); border-top: 1px solid var(--line); }
+  .foot-cta { font-size: clamp(24px, 3.5vw, 40px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; overflow-wrap: anywhere; }
+  .foot-links { display: flex; flex-wrap: wrap; gap: 12px 28px; font: 500 14px/1.4 var(--mono); }
+</style>

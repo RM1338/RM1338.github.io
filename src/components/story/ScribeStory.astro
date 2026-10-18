@@ -1,0 +1,175 @@
+---
+import Chapter from './Chapter.astro';
+
+const pipeline = [
+  ['Record', 'audio file on the phone'],
+  ['Transcribe', 'whisper-large-v3-turbo'],
+  ['Summarise', 'gpt-oss-120b'],
+  ['Sync', 'text only, to your account'],
+];
+---
+
+<Chapter n="01" kicker="Imagine" title="You’re in the meeting, but you’re mostly taking notes.">
+  <Fragment slot="panel">
+    <div class="pg" style="grid-template-columns:1.2fr 1fr;gap:5cqw">
+      <div class="card note">
+        <span class="scrawl">decided: ship v2 on…</span>
+        <span class="scrawl x">ask Sam re budget??</span>
+        <span class="scrawl">action items:</span>
+        <span class="scrawl x">– ……</span>
+        <span class="scrawl">wait what did she say</span>
+      </div>
+      <div class="card">
+        <span class="label-sm">meeting app</span>
+        <strong>Subscription</strong>
+        <span class="mono sub">renews monthly</span>
+        <span class="mono sub">your audio: on their servers</span>
+      </div>
+    </div>
+    <p class="pcap">illustration</p>
+  </Fragment>
+  <p class="lede">
+    Imagine you’re in a meeting that matters. You’re half listening, half writing down what was decided, and by the end
+    your notes have more question marks than answers.
+  </p>
+  <p>
+    The fix on offer is a subscription app that records everything and keeps it on a server you will never see. That’s
+    where Scribe started: I kept losing the thread in meetings, and I didn’t want to rent my own conversations back.
+  </p>
+</Chapter>
+
+<Chapter n="02" kicker="The problem" title="An AI app needs a key, and a key inside an app is already leaked.">
+  <Fragment slot="panel">
+    <div class="pg">
+      <div class="term">
+<span class="m">$ # anyone, with a copy of the APK</span>
+$ unzip -p scribe.apk | strings | grep gsk_
+<span class="r">gsk_••••••••••••••••••••••••••••</span>
+
+<span class="m"># now it is their key, on your bill</span></div>
+      <div class="tag">so the key never ships in the app</div>
+    </div>
+    <p class="pcap">illustration</p>
+  </Fragment>
+  <p>
+    Transcription and summaries run on Groq, and Groq needs an API key. The easy path is to put a shared key in the app.
+    But an Android app can be unpacked by anyone who has a copy, and a key inside it can be pulled out in seconds.
+  </p>
+  <p>
+    So the product question had a security answer: how do people without their own key use Scribe, without the shared
+    key ever touching their phone?
+  </p>
+</Chapter>
+
+<Chapter n="03" kicker="The solution" title="Press record. Get the decisions, not the transcript.">
+  <Fragment slot="panel">
+    <div class="pg" style="grid-template-columns:30cqw 6cqw 1fr;gap:3cqw">
+      <div class="phone rec-phone">
+        <span class="mono sub">Weekly sync · 00:31:07</span>
+        <div class="wave">{Array.from({ length: 14 }, (_, i) => <i style={`height:${20 + ((i * 37) % 70)}%`} />)}</div>
+        <div class="rec"></div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="card">
+        <span class="label-sm">summary</span>
+        <strong>Decisions</strong>
+        <span class="sub">Ship v2 on the 14th</span>
+        <strong>Action items</strong>
+        <span class="sub">Sam: budget by Friday</span>
+        <span class="chip mono">language detected · translate</span>
+      </div>
+    </div>
+    <p class="pcap">illustration</p>
+  </Fragment>
+  <p>
+    Scribe records the meeting, transcribes it with Whisper, and writes a summary of decisions and action items. It
+    detects the language and can translate both the transcript and the summary. Meetings go into folders, can be
+    scheduled with reminders, and export to PDF.
+  </p>
+  <p>
+    Recordings are stored only on the phone. Users can paste their own Groq key and pay per use. Everyone else goes
+    through a server-side proxy that holds the shared key and only answers signed-in users.
+  </p>
+</Chapter>
+
+<Chapter n="04" kicker="My role" title="I built and shipped it on my own.">
+  <Fragment slot="panel">
+    <div class="ledger">
+      <div><span>3</span>public releases, with release notes</div>
+      <div><span>2</span>edge functions guarding the shared key</div>
+      <div><span>16k</span>lines of Dart, roughly</div>
+      <div><span>1</span>developer</div>
+    </div>
+  </Fragment>
+  <p>
+    I designed, built and released Scribe myself: the Flutter app, the Supabase schema and authentication, the two edge
+    functions, and three releases on GitHub with notes for each.
+  </p>
+</Chapter>
+
+<Chapter n="05" kicker="Under the hood" title="Audio stays home. Text syncs. The key stays on the server.">
+  <Fragment slot="panel">
+    <div class="pg" style="grid-template-columns:1.7fr 1fr;align-items:stretch">
+      <div class="stack">
+        {
+          pipeline.map(([t, d]) => (
+            <div class="card stage">
+              <strong>{t}</strong>
+              <span class="mono sub">{d}</span>
+            </div>
+          ))
+        }
+      </div>
+      <div class="card">
+        <span class="label-sm">stack</span>
+        {['Flutter', 'provider', 'Supabase auth', 'Edge Functions', 'Groq', 'local notifications'].map((t) => <span class="sub">{t}</span>)}
+      </div>
+    </div>
+  </Fragment>
+  <ul>
+    <li><strong>Two paths for every AI request:</strong> straight to Groq with the user’s own key, or through an edge function that checks the user is signed in, then adds the shared key on the server.</li>
+    <li><strong>Storage by sensitivity:</strong> audio files are stored only on the device (they are sent to Groq to be transcribed, never kept in the cloud); transcripts, summaries, folders and schedules sync to the user’s account.</li>
+    <li><strong>State with <code>provider</code>,</strong> using proxy providers that rebind when the signed-in user changes, so one account never sees another’s data.</li>
+  </ul>
+</Chapter>
+
+<Chapter n="06" kicker="The hard part" title="The calendar that came back empty.">
+  <Fragment slot="panel">
+    <div class="pg" style="justify-items:center;gap:2.4cqw">
+      <div class="card wide warn">
+        <span class="label-sm">real phones</span>
+        <strong>calendar plugin returned empty data</strong>
+        <span class="sub">Google Calendar, Samsung Calendar, or none at all</span>
+      </div>
+      <div class="flow-arrow">↓</div>
+      <div class="card wide">
+        <strong>Scheduling moved inside the app</strong>
+        <span class="sub">same behaviour on every phone</span>
+      </div>
+    </div>
+  </Fragment>
+  <p>
+    Scheduling first relied on the phone’s calendar through a Flutter plugin. On real hardware it returned empty data,
+    and real phones ship Google Calendar, Samsung Calendar or no calendar at all.
+  </p>
+  <p>
+    Rather than chase every vendor’s calendar, I moved scheduling into Scribe itself, with its own reminders five
+    minutes before and at the start, and a “join now” that turns a scheduled meeting into a recording with one tap. It
+    now behaves the same on every phone.
+  </p>
+</Chapter>
+
+<style>
+  .card.note { gap: 2.6cqw; transform: rotate(-2deg); }
+  .scrawl { font: italic 500 3cqw/1.2 var(--sans); }
+  .scrawl.x { text-decoration: line-through; color: var(--muted); }
+  .rec-phone { align-items: center; gap: 4cqw; }
+  .wave { display: flex; align-items: center; gap: 0.6cqw; height: 16cqw; width: 100%; }
+  .wave i { flex: 1; background: var(--ink); }
+  .rec { margin-top: auto; width: 10cqw; height: 10cqw; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 1.4cqw rgb(255 90 31 / 0.2); }
+  .chip { align-self: flex-start; margin-top: 1cqw; border: 1px solid var(--ink); padding: 0.6cqw 1.2cqw; font-size: 2cqw; }
+  .stack { display: grid; grid-auto-rows: 1fr; gap: 2cqw; }
+  .stage { justify-content: center; }
+  .wide { width: 76cqw; align-items: center; text-align: center; }
+  .warn { border-color: var(--accent); }
+</style>

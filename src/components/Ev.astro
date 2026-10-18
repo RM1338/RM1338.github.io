@@ -1,0 +1,6 @@
+---
+// Evidence tag: how solid the claim next to it is.
+const { e } = Astro.props as { e: 'measured' | 'self-reported' | 'not yet measured' };
+---
+
+<span class={`ev ev-${e.replaceAll(' ', '-')}`}>{e}</span>

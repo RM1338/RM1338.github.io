@@ -1,0 +1,107 @@
+---
+// Follow one Scribe AI request: with the user's own key, or through the
+// sign-in-gated edge function that holds the shared key (supabase/functions).
+---
+
+<div class="flow" data-scribe-flow>
+  <div class="controls">
+    <p class="label">Where does the key live?</p>
+    <div class="seg" role="radiogroup" aria-label="Which key does the request use?">
+      <button type="button" role="radio" aria-checked="true" data-mode="own">I added my own key</button>
+      <button type="button" role="radio" aria-checked="false" data-mode="proxy">I have no key</button>
+    </div>
+    <label class="check"><input type="checkbox" checked data-signed /> Signed in to Scribe</label>
+    <button type="button" class="send" data-send>Transcribe a meeting</button>
+  </div>
+
+  <div class="diagram">
+    <div class="node phone"><strong>Your phone</strong><span class="mono" data-k="phone"></span></div>
+    <div class="node edge" data-edge><strong>Edge function</strong><span class="mono" data-k="edge"></span></div>
+    <div class="node groq"><strong>Groq</strong><span class="mono">Whisper, GPT-OSS</span></div>
+    <div class="wire direct" data-wire="own"><i></i></div>
+    <div class="wire hop1" data-wire="proxy"><i></i></div>
+    <div class="wire hop2" data-wire="proxy2"><i></i></div>
+  </div>
+
+  <pre class="out" aria-live="polite" data-out></pre>
+</div>
+
+<script>
+  for (const root of document.querySelectorAll<HTMLElement>('[data-scribe-flow]')) {
+    const $ = <T extends HTMLElement>(s: string) => root.querySelector<T>(s)!;
+    const out = $('[data-out]');
+    const signed = $<HTMLInputElement>('[data-signed]');
+    let mode = 'own';
+
+    const paint = () => {
+      root.dataset.mode = mode;
+      root.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.mode === mode)));
+      $('[data-k="phone"]').textContent = mode === 'own' ? 'audio + your key' : 'audio + sign-in token';
+      $('[data-k="edge"]').textContent = mode === 'own' ? 'not used' : 'holds the shared key';
+      out.textContent = mode === 'own'
+        ? 'Your key lives in Scribe’s settings on your phone. The request goes straight to Groq.'
+        : 'No key on the phone at all. The request goes to Scribe’s edge function, which checks you are signed in and adds the shared key on the server.';
+    };
+    root.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach((b) =>
+      b.addEventListener('click', () => { mode = b.dataset.mode!; paint(); }),
+    );
+    $('[data-send]').addEventListener('click', () => {
+      root.classList.remove('go', 'stop');
+      void root.offsetWidth;
+      if (mode === 'proxy' && !signed.checked) {
+        root.classList.add('go', 'stop');
+        out.innerHTML = '<span class="bad">401 Unauthorized</span>\nThe edge function refuses requests from anyone who is not signed in, so the shared key cannot be used by strangers.';
+        return;
+      }
+      root.classList.add('go');
+      out.innerHTML = mode === 'own'
+        ? '<span class="ok">200</span> transcript returned · billed to your own Groq account'
+        : '<span class="ok">200</span> transcript returned · the shared key never left the server';
+    });
+    paint();
+  }
+</script>
+
+<style>
+  .flow { display: grid; grid-template-columns: 1fr 1.6fr; border: 1.5px solid var(--ink); background: var(--surface); }
+  .controls { padding: 20px; display: flex; flex-direction: column; gap: 14px; border-right: 1px solid var(--line); }
+  .seg { display: grid; gap: 6px; }
+  .seg button { padding: 10px 12px; border: 1px solid var(--line); background: var(--bg); font: inherit; font-size: 15px; text-align: left; cursor: pointer; color: var(--ink); }
+  .seg button[aria-checked='true'] { border-color: var(--ink); background: var(--surface); box-shadow: inset 3px 0 0 var(--accent); }
+  .check { font-size: 15px; display: flex; gap: 8px; align-items: center; }
+  .check input { accent-color: var(--accent); width: 18px; height: 18px; }
+  .send { align-self: start; padding: 10px 18px; border-radius: 999px; border: 1px solid var(--ink); background: var(--ink); color: var(--bg); font: 500 14px var(--sans); cursor: pointer; }
+  .send:hover { background: var(--accent); border-color: var(--accent); color: #141414; }
+
+  .diagram { position: relative; min-height: 260px; margin: 20px; }
+  .node { position: absolute; display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border: 1.5px solid var(--ink); background: var(--surface); width: 30%; font-size: 15px; z-index: 1; }
+  .node span { font-size: 12px; color: var(--muted); }
+  .phone { left: 0; top: 0; }
+  .groq { right: 0; top: 0; }
+  .edge { left: 35%; bottom: 0; transition: opacity 0.3s; }
+  [data-mode='own'] .edge { opacity: 0.35; }
+  .wire { position: absolute; height: 2px; background: var(--line); transform-origin: left center; }
+  .wire i { position: absolute; left: 0; top: -5px; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); opacity: 0; }
+  .direct { left: 30%; top: 30px; width: 40%; }
+  .hop1 { left: 15%; top: 70px; width: 32%; transform: rotate(48deg); }
+  .hop2 { left: 55%; top: 205px; width: 32%; transform: rotate(-48deg); }
+  [data-mode='own'] .direct, [data-mode='proxy'] .hop1, [data-mode='proxy'] .hop2 { background: var(--ink); }
+  :global(.go)[data-mode='own'] .direct i { animation: travel 0.9s ease-in-out forwards; }
+  :global(.go)[data-mode='proxy'] .hop1 i { animation: travel 0.8s ease-in-out forwards; }
+  :global(.go)[data-mode='proxy']:not(:global(.stop)) .hop2 i { animation: travel 0.8s ease-in-out 0.8s forwards; }
+  :global(.stop) .edge { border-color: #d12f2f; box-shadow: 0 0 0 3px rgb(209 47 47 / 0.2); }
+  @keyframes travel { 0% { left: 0; opacity: 1; } 100% { left: calc(100% - 12px); opacity: 1; } }
+
+  .out { grid-column: 1 / -1; margin: 0; background: #141414; color: #e8e8e4; padding: 14px 20px; font: 13px/1.55 var(--mono); white-space: pre-wrap; height: 96px; overflow-y: auto; }
+  .out :global(.ok) { color: #7ee2a8; }
+  .out :global(.bad) { color: #ff7b72; }
+  @media (max-width: 960px) {
+    .flow { grid-template-columns: 1fr; }
+    .controls { border-right: 0; border-bottom: 1px solid var(--line); }
+    .node { width: 42%; font-size: 13px; }
+    .edge { left: 29%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .wire i { animation: none !important; }
+  }
+</style>

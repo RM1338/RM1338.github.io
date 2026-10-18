@@ -1,0 +1,65 @@
+---
+import Stage from '../Stage.astro';
+
+// The Scribe mark, extruded: the same PNG used as a mask on stacked layers,
+// recoloured to this site's palette.
+const layers = Array.from({ length: 12 }, (_, i) => i);
+---
+
+<Stage label="Scribe: the Scribe mark, with a live audio waveform beside it and a tag showing the shared API key stays on the server.">
+  <img slot="brand" class="mark" src="/brand/scribe-mark.png" alt="" />
+  <span slot="brand">Scribe</span>
+
+  <div class="actor wave" style="--x:22;--z:6;--w:16">
+    {Array.from({ length: 9 }, (_, i) => <span style={`--d:${(i * 0.13).toFixed(2)}s`} />)}
+  </div>
+
+  <div class="actor s3d" style="--x:50;--z:10;--w:26">
+    {layers.map((i) => <div class:list={['layer', { face: i === layers.length - 1 }]} style={`--i:${i}`} />)}
+  </div>
+
+  <div class="actor key" style="--x:78;--z:4;--w:18">
+    <span class="k">key</span>
+    <span>server-side only</span>
+  </div>
+</Stage>
+
+<style>
+  .mark { height: 3.8cqw; width: auto; filter: grayscale(1) brightness(0.2); }
+  .actor.s3d { aspect-ratio: 1; filter: none; animation: turn 8s ease-in-out infinite; }
+  .layer {
+    position: absolute;
+    inset: 0;
+    transform: translateZ(calc(var(--i) * 0.35cqw));
+    background: var(--accent);
+    -webkit-mask: url(/brand/scribe-mark.png) center / contain no-repeat;
+    mask: url(/brand/scribe-mark.png) center / contain no-repeat;
+    filter: brightness(0.8);
+  }
+  .layer.face { background: var(--ink); filter: none; }
+  @keyframes turn {
+    0%, 100% { transform: translateX(-50%) translateZ(10cqw) rotateY(-18deg); }
+    50% { transform: translateX(-50%) translateZ(10cqw) rotateY(22deg); }
+  }
+  .actor.wave { display: flex; align-items: center; gap: 0.8cqw; height: 14cqw; filter: none; }
+  .wave span {
+    flex: 1;
+    height: 30%;
+    background: var(--ink);
+    animation: talk 1.2s ease-in-out var(--d) infinite alternate;
+  }
+  @keyframes talk { to { height: 100%; } }
+  .key {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: 1.4cqw;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6cqw;
+    font: 500 1.6cqw/1.2 var(--mono);
+  }
+  .key .k { color: var(--accent); font-weight: 700; text-transform: uppercase; }
+  @media (prefers-reduced-motion: reduce) {
+    .wave span:nth-child(odd) { height: 80%; }
+  }
+</style>

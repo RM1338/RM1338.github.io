@@ -1,0 +1,219 @@
+---
+import Chapter from './Chapter.astro';
+import { boSVG, markSVG, TEAM_COLORS } from '../../lib/crewbo/bo.js';
+import '../../lib/crewbo/bo.css';
+
+const [cobalt, teal, , ember] = TEAM_COLORS;
+const team = [
+  { who: 'riya', agent: 'Claude Code', os: 'Linux', c: cobalt.base, state: 'working' },
+  { who: 'dev', agent: 'Codex', os: 'macOS', c: teal.base, state: 'working' },
+  { who: 'maya', agent: 'Antigravity', os: 'Windows', c: ember.base, state: 'working' },
+  { who: 'you', agent: 'waiting your turn', os: '', c: '', state: 'offline' },
+] as const;
+// The three laptops in the solution diagram; x is the left edge on the panel's 100-unit grid.
+const nodes = team.slice(0, 3).map((t, i) => ({ ...t, x: 4 + i * 33 }));
+---
+
+<Chapter n="01" kicker="Imagine" title="It’s 2 a.m. and four agents want the same file.">
+  <Fragment slot="panel">
+    <div class="pg" style="grid-template-columns:1fr 1fr">
+      <p class="label-sm" style="grid-column:1/-1;margin:0">02:14 · six hours to the demo</p>
+      {
+        team.map((t) => (
+          <div class="card laptop">
+            <div class="bo-slot" set:html={boSVG({ state: t.state, color: t.c || undefined, size: 100 })} />
+            <div>
+              <strong>{t.who}</strong>
+              <span class="mono sub">{t.agent}</span>
+              <span class="mono sub">{t.os || '\u00a0'}</span>
+            </div>
+          </div>
+        ))
+      }
+      <div class="bubble" style="grid-column:1/-1;justify-self:center">“who just rewrote session.ts?”</div>
+    </div>
+  </Fragment>
+  <p class="lede">
+    Imagine a hackathon. Four of you, one repository, six hours left. Each of you has an AI coding agent that can
+    write a feature in minutes.
+  </p>
+  <p>
+    So who gets to drive? If one person drives, three people watch. If everyone drives, four agents start editing the
+    same files at once, each one sure it is alone, and nobody finds out until the merge.
+  </p>
+</Chapter>
+
+<Chapter n="02" kicker="The problem" title="Agents can’t see each other. Git only tells you at the end.">
+  <Fragment slot="panel">
+    <div class="pg">
+      <div class="term">
+<span class="m">$ git merge dev/rate-limit</span>
+CONFLICT (content): src/auth/session.ts
+<span class="r">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</span>
+export const session = createSession(&#123; ttl: 3600 &#125;)
+<span class="r">=======</span>
+export const session = newSession(config.auth)
+<span class="r">&gt;&gt;&gt;&gt;&gt;&gt;&gt; dev/rate-limit</span></div>
+      <div class="tag">found 40 minutes of work too late</div>
+    </div>
+    <p class="pcap">illustration</p>
+  </Fragment>
+  <p>
+    Every coding agent assumes it owns the repository. None of them knows a teammate’s agent is editing the next file
+    over, and git reports the collision only when someone merges, after both people have built on top of it.
+  </p>
+  <p>
+    Before writing any code I interviewed ten teams. Nine of them mixed agent vendors in the same room: Claude Code on
+    one laptop, Codex on another. So the answer could not belong to one vendor or one operating system.
+  </p>
+</Chapter>
+
+<Chapter n="03" kicker="The solution" title="Claims that every agent respects, wherever it runs.">
+  <Fragment slot="panel">
+    <svg class="wires" viewBox="0 0 100 75" aria-hidden="true">
+      <defs>
+        <marker id="cb-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0L10 5L0 10z" fill="currentColor" />
+        </marker>
+      </defs>
+      {nodes.map((n, i) => <line x1={n.x + 13} y1="31" x2={40 + i * 10} y2="20" marker-start="url(#cb-head)" marker-end="url(#cb-head)" />)}
+      {nodes.map((n, i) => <line class="dash" x1={n.x + 13} y1="47" x2={35 + i * 15} y2="57" marker-end="url(#cb-head)" />)}
+    </svg>
+    <div class="card box" style="left:28cqw;top:5cqw;width:44cqw;height:15cqw">
+      <div class="row"><span class="hub-mark" set:html={markSVG({ size: 100 })} /><strong>Sync server</strong></div>
+      <span class="mono sub">claims, tasks, status · <span class="no">never file contents</span></span>
+    </div>
+    {
+      nodes.map((n) => (
+        <div class="card box node" style={`left:${n.x}cqw;top:31cqw;width:26cqw;height:16cqw`}>
+          <div class="bo-slot sm" set:html={boSVG({ state: 'working', color: n.c, size: 100 })} />
+          <div><strong>{n.who}</strong><span class="mono sub">{n.os} · daemon</span></div>
+        </div>
+      ))
+    }
+    <div class="card box git" style="left:20cqw;top:57cqw;width:60cqw;height:12cqw">
+      <strong>Your git remote</strong>
+      <span class="mono sub">code, checkpoints, merges</span>
+    </div>
+  </Fragment>
+  <p>
+    With Crewbo, a teammate claims a file or a folder for their agent. Every agent’s own hooks ask the local Crewbo
+    daemon before each edit, and an edit to someone else’s file is refused with a message the agent can act on:
+  </p>
+  <p class="quote mono">
+    src/auth/session.ts is claimed by riya’s agent until at least 11:52 (Crewbo). Work on other files, or ask them to
+    hand it over: crewbo claim request src/auth/session.ts
+  </p>
+  <p>
+    Claims are leases, so a crashed agent cannot hold a file for long. Each task gets its own branch, Crewbo
+    checkpoints it when the agent stops, and it compares every pair of checkpoints with git so both people hear about
+    a conflict before anyone merges.
+  </p>
+</Chapter>
+
+<Chapter n="04" kicker="My role" title="I founded it, designed it, and set the rules it is built by.">
+  <Fragment slot="panel">
+    <div class="ledger">
+      <div><span>10</span>team interviews, before any code</div>
+      <div><span>1</span>go / no-go gate with written kill criteria</div>
+      <div><span>15</span>architecture decision records</div>
+      <div><span>5</span>milestones, each opened by my approval</div>
+      <div><span>3</span>operating systems tested live</div>
+      <div><span>109</span>pull requests reviewed and merged by me</div>
+    </div>
+  </Fragment>
+  <p>
+    I run Crewbo the way I want its users to run their agents: with rules, not trust. I did the research, wrote the
+    product requirements and kill criteria, made each architecture decision, ran the checks on Windows and across
+    two machines, and reviewed every pull request before it merged.
+  </p>
+  <p>
+    The engineering runs on written rules: verify every external fact against its source, claim nothing that was not
+    run, record every costly decision, and pass a gate before each milestone. Every change runs on Linux,
+    macOS and Windows in CI before it merges.
+  </p>
+</Chapter>
+
+<Chapter n="05" kicker="Under the hood" title="A decision in milliseconds, with no network on the path.">
+  <Fragment slot="panel">
+    <div class="pg">
+      <div class="term">
+<span class="m"># maya's agent wants to edit a file</span>
+Edit src/auth/session.ts
+ └ PreToolUse hook → crewbo hook claude-code
+    └ daemon: local claim set
+       held by riya, lease 11:52
+<span class="r"> ✕ deny</span>  <span class="m">(the agent reads the reason)</span>
+
+<span class="m"># same check for shell commands</span>
+sed -i 's/ttl/maxAge/' src/auth/session.ts
+ └ parsed write target: src/auth/session.ts
+<span class="r"> ✕ deny</span></div>
+    </div>
+    <p class="pcap">simplified</p>
+  </Fragment>
+  <ul>
+    <li>
+      <strong>The daemon answers from its own copy of the room’s claims,</strong> so an agent never waits on the
+      network. Starting the hook process took 2.3 ms at the median in the first spike.
+    </li>
+    <li>
+      <strong>Hooks enforce; MCP only informs.</strong> In the spike, just telling the agent a file was claimed stopped
+      it from trying. The hook’s refusal is the backstop, and it holds even with permissions bypassed.
+    </li>
+    <li>
+      <strong>Shell commands are parsed for the files they write,</strong> with a POSIX parser and a PowerShell
+      tokenizer: 81% and 87% of writes caught before they run. A hash check afterwards reports the rest.
+    </li>
+    <li>
+      <strong>Conflicts come from git itself:</strong> <code>git merge-tree</code> on every pair of task checkpoints,
+      across machines. Tasks a lead sends are signed with Ed25519 and run only after the teammate types <code>yes</code>.
+    </li>
+  </ul>
+</Chapter>
+
+<Chapter n="06" kicker="The hard part" title="The guard that failed open, silently.">
+  <Fragment slot="panel">
+    <div class="pg">
+      <div class="term">
+<span class="m">PS&gt; # Windows 11, Codex, hook installed at:</span>
+C:/dev/spikes test/bin/probe.exe
+<span class="m">PS&gt; codex exec "append a line to blocked.txt"</span>
+<span class="g">✓ updated blocked.txt</span>
+
+<span class="m">hooks run:</span>   <span class="r">0</span>
+<span class="m">errors shown:</span> <span class="r">0</span></div>
+      <div class="tag">one space in a path, and the guard is gone</div>
+    </div>
+    <p class="pcap">reconstructed from the spike notes</p>
+  </Fragment>
+  <p>
+    During the Windows spike, a claimed file was edited anyway. No error, no warning. The cause was one space: Codex
+    runs hooks through a shell, and an unquoted hook path containing a space never runs at all. Nothing in any
+    documentation says so; it only showed up because every feature is tested live on every operating system.
+  </p>
+  <p>
+    A coordination tool that fails open is worse than none, because the team believes it is protected. So the
+    installer now refuses paths with spaces, and <code>crewbo doctor</code> checks for hooks that never fire. The same
+    habit caught two more: a byte-order mark on hook input that made the parser read nothing and allow the edit, and a
+    keychain call that blocked for over a minute when no secret service was running.
+  </p>
+</Chapter>
+
+<style>
+  .card.laptop { flex-direction: row; gap: 2.4cqw; align-items: center; height: 100%; }
+  .bo-slot { width: 11cqw; flex: none; }
+  .bo-slot.sm { width: 7cqw; }
+  .bo-slot :global(svg), .hub-mark :global(svg) { width: 100%; height: auto; display: block; }
+  .wires { position: absolute; inset: 0; width: 100%; height: 100%; color: var(--ink); }
+  .wires line { stroke: currentColor; stroke-width: 0.35; }
+  .wires .dash { stroke-dasharray: 1.2 1; color: var(--muted); }
+  .box { position: absolute; justify-content: center; }
+  .card.node { flex-direction: row; align-items: center; gap: 1.6cqw; padding: 1.6cqw 2cqw; }
+  .row { display: flex; align-items: center; gap: 1.4cqw; }
+  .hub-mark { width: 4.6cqw; display: block; }
+  .git { border-style: dashed; align-items: center; text-align: center; }
+  .box:not(.node):not(.git) { align-items: center; text-align: center; }
+  .no { color: var(--accent); }
+  .quote { border-left: 3px solid var(--accent); padding: 10px 14px; background: var(--surface); font-size: 14px; line-height: 1.5; }
+</style>
