@@ -38,8 +38,17 @@ const timeline = [
 // ponytail: copied by hand from https://medium.com/feed/@ronelmathew; refresh when a post is published.
 const posts = [
   {
+    title: 'Gremlin: An Agent That Breaks Your Flutter App Before Your Users Do',
+    date: '19 Oct 2026',
+    source: 'Long read',
+    text: 'Why the model only chooses where to tap, how a fix gets graded with nobody watching, and the bugs that hid inside my own evaluation.',
+    tags: ['AI agents', 'Testing', 'Flutter', 'Android'],
+    href: '/writing/gremlin',
+  },
+  {
     title: 'Zero-Touch OS Deployment: Migrating 90 Lab Systems with PXE',
     date: '6 Aug 2026',
+    source: 'Medium',
     text: 'Moving a 90-machine college lab from Ubuntu 22.04 to 24.04 in one weekend over network boot, and the DHCP option 93 mistake that silently stopped machines from booting.',
     tags: ['Linux', 'PXE', 'DHCP', 'Ubuntu'],
     href: 'https://medium.com/@ronelmathew/zero-touch-os-deployment-migrating-90-lab-systems-with-pxe-15e25b62e979',
@@ -169,8 +178,8 @@ const posts = [
     {
       posts.map((p) => (
         <a class="post" href={p.href}>
-          <span class="mono when">{p.date} · Medium</span>
-          <span class="post-title">{p.title} ↗</span>
+          <span class="mono when">{p.date} · {p.source}</span>
+          <span class="post-title">{p.title}{p.href.startsWith('http') ? ' ↗' : ''}</span>
           <span class="muted">{p.text}</span>
           <span class="post-tags mono">{p.tags.join(' · ')}</span>
         </a>

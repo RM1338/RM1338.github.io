@@ -25,4 +25,10 @@ const work = defineCollection({
     }),
 });
 
-export const collections = { work };
+// Long-form posts, also imported into Medium from their page here (Medium keeps this page as the canonical link).
+const writing = defineCollection({
+  loader: glob({ pattern: '*.md', base: './src/content/writing' }),
+  schema: () => z.object({ title: z.string(), subtitle: z.string(), date: z.coerce.date(), description: z.string() }),
+});
+
+export const collections = { work, writing };

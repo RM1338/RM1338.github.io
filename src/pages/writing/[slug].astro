@@ -1,0 +1,45 @@
+---
+import { getCollection, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+
+export async function getStaticPaths() {
+  return (await getCollection('writing')).map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const d = entry.data;
+const date = d.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+---
+
+<Base title={`${d.title} · Ronel Abraham Mathew`} description={d.description}>
+  <article class="post wrap">
+    <header>
+      <p class="label"><a href="/#writing">Writing</a> · {date}</p>
+      <h1>{d.title}</h1>
+      <p class="subtitle">{d.subtitle}</p>
+    </header>
+    <div class="prose">
+      <Content />
+    </div>
+  </article>
+</Base>
+
+<style>
+  /* One reading column; plain semantic HTML so Medium's "Import a story" can carry it over cleanly. */
+  .post { max-width: calc(720px + 2 * var(--pad)); padding-top: 56px; }
+  .label a { text-decoration: none; }
+  h1 { font-size: clamp(36px, 5vw, 56px); line-height: 1.08; margin-top: 12px; }
+  .subtitle { font-family: var(--serif); font-style: italic; font-size: clamp(20px, 2.4vw, 24px); line-height: 1.4; color: var(--muted); margin-top: 18px; }
+  .prose { margin-top: 32px; font-size: 19px; line-height: 1.7; }
+  .prose :global(h3) { font-family: var(--serif); font-weight: 400; font-size: clamp(26px, 3vw, 32px); margin: 56px 0 16px; }
+  .prose :global(h4) { font-size: 21px; font-weight: 600; margin: 32px 0 12px; line-height: 1.35; }
+  .prose :global(img) { width: 100%; height: auto; margin: 28px 0; border: 1px solid var(--line); }
+  .prose :global(ul), .prose :global(ol) { padding-left: 22px; }
+  .prose :global(li + li) { margin-top: 6px; }
+  .prose :global(blockquote) { margin: 24px 0; padding: 4px 0 4px 20px; border-left: 3px solid var(--ink); color: var(--muted); }
+  .prose :global(pre) { background: #141414; color: #e8e8e4; padding: 18px 20px; border-radius: 10px; overflow-x: auto; font: 14px/1.6 var(--mono); }
+  .prose :global(code) { font-family: var(--mono); font-size: 0.86em; }
+  .prose :global(:not(pre) > code) { background: var(--surface); border: 1px solid var(--line); padding: 1px 5px; }
+  .prose :global(p) { margin: 0 0 1.1em; }
+</style>
