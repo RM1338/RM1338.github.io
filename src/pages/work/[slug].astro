@@ -20,7 +20,7 @@ const Figure = figures[entry.id as keyof typeof figures];
 const { Story, Try } = stories[entry.id as keyof typeof stories];
 
 // The same eight chapters on every case study.
-const chapters = ['Imagine', 'The problem', 'The solution', 'My role', 'Under the hood', 'The hard part', 'Results', 'Next'];
+const chapters = ['Imagine', 'The problem', 'The solution', 'My role', 'Under the hood', 'The hard part', 'Results'];
 ---
 
 <Base title={`${d.title} · Ronel Abraham Mathew`} description={d.tagline} image={`/og/${entry.id}.png`}>
@@ -64,12 +64,18 @@ const chapters = ['Imagine', 'The problem', 'The solution', 'My role', 'Under th
       }
     </nav>
     <script>
-      // Anchor jumps clear the strip at whatever height it has wrapped to.
+      // One line, always: if the full chapter names would wrap, show numbers only.
       const strip = document.querySelector<HTMLElement>('.chapters');
       if (strip) {
-        new ResizeObserver(() =>
-          document.documentElement.style.setProperty('--strip-h', `${strip.offsetHeight}px`),
-        ).observe(strip);
+        const fit = () => {
+          strip.classList.remove('compact');
+          const links = strip.querySelectorAll<HTMLElement>('a');
+          const wraps = links.length > 1 && links[links.length - 1].offsetTop > links[0].offsetTop;
+          strip.classList.toggle('compact', wraps);
+          document.documentElement.style.setProperty('--strip-h', `${strip.offsetHeight}px`);
+        };
+        new ResizeObserver(fit).observe(strip.parentElement ?? strip);
+        document.fonts?.ready.then(fit);
       }
     </script>
 
@@ -153,12 +159,10 @@ const chapters = ['Imagine', 'The problem', 'The solution', 'My role', 'Under th
   }
   .chapters a { text-decoration: none; color: var(--muted); white-space: nowrap; }
   .chapters a .num { color: var(--ink); }
-  /* On phones only the numbers fit on one line; the names stay in the title and for screen readers. */
-  @media (max-width: 640px) {
-    .chapters { justify-content: space-between; gap: 8px; }
-    .chapters a .name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-    .chapters a { padding: 4px 2px; }
-  }
+  /* When the names would wrap, only the numbers show; names stay in the title and for screen readers. */
+  .chapters:global(.compact) { justify-content: space-between; gap: 8px; }
+  .chapters:global(.compact) a .name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .chapters:global(.compact) a { padding: 4px 2px; }
   .chapters a:hover { color: var(--accent); }
 
   .results-panel { position: absolute; inset: 6cqw; display: grid; grid-template-columns: 1fr 1fr; gap: 4cqw; align-content: center; }
