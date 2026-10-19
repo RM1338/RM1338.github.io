@@ -57,12 +57,21 @@ const chapters = ['Imagine', 'The problem', 'The solution', 'My role', 'Under th
     <nav class="chapters" aria-label="Chapters">
       {
         chapters.map((c, i) => (
-          <a href={`#${c.toLowerCase().replaceAll(' ', '-')}`}>
-            <span>{String(i + 1).padStart(2, '0')}</span> {c}
+          <a href={`#${c.toLowerCase().replaceAll(' ', '-')}`} title={c}>
+            <span class="num">{String(i + 1).padStart(2, '0')}</span> <span class="name">{c}</span>
           </a>
         ))
       }
     </nav>
+    <script>
+      // Anchor jumps clear the strip at whatever height it has wrapped to.
+      const strip = document.querySelector<HTMLElement>('.chapters');
+      if (strip) {
+        new ResizeObserver(() =>
+          document.documentElement.style.setProperty('--strip-h', `${strip.offsetHeight}px`),
+        ).observe(strip);
+      }
+    </script>
 
     <div class="story">
       <Story />
@@ -133,18 +142,23 @@ const chapters = ['Imagine', 'The problem', 'The solution', 'My role', 'Under th
     z-index: 5;
     margin-top: 96px;
     display: flex;
-    gap: 4px 20px;
-    overflow-x: auto;
+    flex-wrap: wrap;
+    gap: 10px 20px;
     padding: 14px 0;
     background: var(--bg);
     border-bottom: 1.5px solid var(--ink);
     font: 500 12px/1 var(--mono);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    white-space: nowrap;
   }
-  .chapters a { text-decoration: none; color: var(--muted); }
-  .chapters a span { color: var(--ink); }
+  .chapters a { text-decoration: none; color: var(--muted); white-space: nowrap; }
+  .chapters a .num { color: var(--ink); }
+  /* On phones only the numbers fit on one line; the names stay in the title and for screen readers. */
+  @media (max-width: 640px) {
+    .chapters { justify-content: space-between; gap: 8px; }
+    .chapters a .name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .chapters a { padding: 4px 2px; }
+  }
   .chapters a:hover { color: var(--accent); }
 
   .results-panel { position: absolute; inset: 6cqw; display: grid; grid-template-columns: 1fr 1fr; gap: 4cqw; align-content: center; }

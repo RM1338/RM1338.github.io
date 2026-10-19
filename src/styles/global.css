@@ -31,7 +31,7 @@
 * { box-sizing: border-box; }
 /* Anchor jumps land with breathing room below the sticky nav instead of under it. */
 html { -webkit-text-size-adjust: 100%; scroll-padding-top: calc(var(--nav-h) + 40px); scroll-behavior: smooth; }
-html:has(.chapters) { scroll-padding-top: calc(var(--nav-h) + 96px); }
+html:has(.chapters) { scroll-padding-top: calc(var(--nav-h) + var(--strip-h, 44px) + 40px); }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 body {
   margin: 0;
