@@ -1,0 +1,56 @@
+---
+// A side quest's frame: the project's character peeks over a thin line partway down a case study;
+// clicking it opens the game (default slot) in place. One per case study.
+interface Props {
+  id: string;
+  /** Short label shown when the character is hovered. */
+  tip?: string;
+  /** Keep the character still (Bo's brand rules: only Bo's eyes move). */
+  still?: boolean;
+}
+const { id, tip = 'psst · side quest', still = false } = Astro.props;
+---
+
+<div class="quest" role="region" aria-label="Side quest" data-quest>
+  <button type="button" class:list={['peek', { still }]} data-q-open aria-expanded="false" aria-controls={id} title={`${tip}?`}>
+    <span class="peek-art"><slot name="peek" /></span>
+    <span class="peek-tip">{tip}</span>
+  </button>
+  <div class="game" id={id} data-q-body hidden>
+    <slot />
+  </div>
+</div>
+
+<script>
+  for (const q of document.querySelectorAll<HTMLElement>('[data-quest]')) {
+    const open = q.querySelector<HTMLButtonElement>('[data-q-open]')!;
+    const body = q.querySelector<HTMLElement>('[data-q-body]')!;
+    open.addEventListener('click', () => {
+      const show = body.hidden;
+      body.hidden = !show;
+      open.setAttribute('aria-expanded', String(show));
+      open.classList.add('found');
+      if (show) body.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    });
+  }
+</script>
+
+<style>
+  .quest { position: relative; margin: 72px 0; min-height: 1px; } /* 1px keeps its margins from collapsing while closed */
+  .quest::before { content: ''; position: absolute; left: 0; right: 0; top: 0; border-top: 1px solid var(--line); }
+  /* The character peeks over the line: visible if you look, easy to scroll past. */
+  .peek {
+    position: absolute; right: 0; top: -30px; width: 56px; height: 56px; padding: 0; border: 0; background: none;
+    cursor: pointer; clip-path: inset(0 0 26px 0); transition: transform 0.25s ease, clip-path 0.25s ease;
+  }
+  .peek-art { display: block; width: 56px; height: 56px; animation: peek-bob 7s ease-in-out infinite; }
+  .peek.still .peek-art { animation: none; }
+  .peek-art :global(img), .peek-art :global(svg) { width: 100%; height: 100%; display: block; }
+  .peek:hover, .peek:focus-visible, .peek:global(.found) { transform: translateY(-8px); clip-path: inset(0 0 0 0); }
+  .peek-tip { position: absolute; right: 64px; top: 10px; white-space: nowrap; font: 400 13px var(--mono); color: var(--muted); opacity: 0; transition: opacity 0.2s; }
+  .peek:hover .peek-tip, .peek:focus-visible .peek-tip { opacity: 1; }
+  @keyframes peek-bob { 0%, 86%, 100% { transform: translateY(0); } 90% { transform: translateY(-5px); } 94% { transform: translateY(0); } }
+  .game { padding-top: 48px; scroll-margin-top: calc(var(--nav-h) + var(--strip-h, 0px) + 24px); }
+  .game[hidden] { display: none; }
+  @media (prefers-reduced-motion: reduce) { .peek-art { animation: none; } .peek { transition: none; } }
+</style>

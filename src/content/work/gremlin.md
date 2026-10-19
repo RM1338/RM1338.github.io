@@ -3,6 +3,7 @@ title: Gremlin
 order: 2
 kind: Research
 tagline: An agent that explores a Flutter app like a confused user, files a bug report whenever the framework logs a failure, and can prove a fix by replaying the exact taps.
+plain: "Testing an app usually means someone writing a test for every screen. Gremlin is a robot tester that taps around an app on its own, like a curious kid, and only reports a problem when the app itself admits something went wrong, so it never makes problems up."
 status: { label: "Prototype, public repo", tone: research }
 role: Designer and builder. Research, engineering, evaluation
 dates: Jul 2026 to now

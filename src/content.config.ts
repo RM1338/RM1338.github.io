@@ -12,6 +12,8 @@ const work = defineCollection({
       order: z.number(),
       kind: z.string(),
       tagline: z.string(),
+      /** The same idea for a non-technical reader (home page "explain it like a friend"). */
+      plain: z.string(),
       status: z.object({ label: z.string(), tone: z.enum(['live', 'preview', 'research']) }),
       role: z.string(),
       dates: z.string(),

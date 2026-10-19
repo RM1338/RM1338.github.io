@@ -3,6 +3,7 @@ title: Crewbo
 order: 1
 kind: My startup
 tagline: Run every teammate's AI coding agent on the same repository, at the same time, without collisions.
+plain: "When a whole team uses AI assistants to write code together, the assistants can’t see each other and end up rewriting the same files. Crewbo works like a sign-out sheet: once one assistant is working on a file, the others are politely stopped and told who has it."
 status: { label: "Preview v0.x, private repo", tone: preview }
 role: Founder. Product, architecture, engineering and testing
 dates: Oct 2026 to now

@@ -1,5 +1,6 @@
 ---
 import Chapter from './Chapter.astro';
+import OracleGame from '../quest/OracleGame.astro';
 import scout from '../../assets/nib/nib-explorer.svg?raw';
 import report from '../../assets/nib/nib-trace.svg?raw';
 
@@ -86,6 +87,8 @@ const gates = ['signal gone on replay', 'screen still looks like itself', 'nothi
     can propose a fix, and Gremlin can prove it by rebuilding the app and replaying those taps with nobody watching.
   </p>
 </Chapter>
+
+<OracleGame />
 
 <Chapter n="04" kicker="My role" title="I built it, and I keep the ledger of what isn’t proven.">
   <Fragment slot="panel">

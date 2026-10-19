@@ -1,7 +1,8 @@
 ---
-// Side quest, home page: Nib peeks over a section line; clicking him opens "Be the oracle",
+// Gremlin's side quest: Nib peeks over a line; clicking him opens "Be the oracle",
 // a short game where the player flags real failure lines in a scrolling device log and ignores noise.
 // It is Gremlin's idea in miniature: detection is an exact match on what the framework says, not a hunch.
+import QuestShell from './QuestShell.astro';
 import scout from '../../assets/nib/nib-explorer.svg?raw';
 import chaos from '../../assets/nib/nib-chaos.svg?raw';
 import success from '../../assets/nib/nib-success.svg?raw';
@@ -31,13 +32,9 @@ const lines: [string, boolean][] = [
 ];
 ---
 
-<section class="quest wrap" aria-label="Side quest">
-  <button type="button" class="peek" data-q-open aria-expanded="false" aria-controls="quest-game" title="Psst. Side quest?">
-    <img src="/brand/gremlin-mark.svg" alt="" width="56" height="56" />
-    <span class="peek-tip">psst · side quest</span>
-  </button>
-
-  <div class="game" id="quest-game" data-q-game data-lines={JSON.stringify(lines)} hidden>
+<QuestShell id="oracle-game">
+  <img slot="peek" src="/brand/gremlin-mark.svg" alt="" width="56" height="56" />
+  <div data-q-game data-lines={JSON.stringify(lines)}>
     <div class="game-head">
       <div class="nib" data-q-nib>
         <span data-pose="scout" set:html={scout} />
@@ -64,12 +61,11 @@ const lines: [string, boolean][] = [
       <p class="verdict" data-q-verdict aria-live="polite"></p>
     </div>
   </div>
-</section>
+</QuestShell>
 
 <script>
   const root = document.querySelector<HTMLElement>('[data-q-game]');
-  const open = document.querySelector<HTMLButtonElement>('[data-q-open]');
-  if (root && open) {
+  if (root) {
     const lines: [string, boolean][] = JSON.parse(root.dataset.lines!);
     const $ = (s: string) => root.querySelector<HTMLElement>(s)!;
     const log = $('[data-q-log]'), startBtn = $('[data-q-start]') as HTMLButtonElement, verdict = $('[data-q-verdict]');
@@ -80,13 +76,6 @@ const lines: [string, boolean][] = [
     const pose = (p: string) => root.querySelectorAll<HTMLElement>('[data-pose]').forEach((el) => (el.hidden = el.dataset.pose !== p));
     const paint = () => { $('[data-q-hit]').textContent = `${hit} / ${total}`; $('[data-q-false]').textContent = `${falseAlarm}`; $('[data-q-miss]').textContent = `${miss}`; };
 
-    open.addEventListener('click', () => {
-      const show = root.hidden;
-      root.hidden = !show;
-      open.setAttribute('aria-expanded', String(show));
-      open.classList.toggle('found', true);
-      if (show) root.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
-    });
 
     const retire = (row: HTMLElement) => {
       if (row.dataset.bad === '1' && !row.dataset.done) { miss++; row.classList.add('missed'); }
@@ -140,29 +129,11 @@ const lines: [string, boolean][] = [
   }
 
   // For the curious in DevTools: the oracle reads logs, so the hint lives in one.
-  console.log('%cPsst. Nib is peeking over a line on the home page. Click him.', 'font-weight:700;color:#ff5a1f');
+  console.log('%cPsst. Nib is peeking over a line further down this page. Click him.', 'font-weight:700;color:#ff5a1f');
 </script>
 
 <style>
-  .quest { position: relative; margin-top: 112px; min-height: 1px; } /* 1px stops its margins collapsing into the next section while the game is closed */
-  /* The line Nib peeks over, aligned to the content edges. */
-  .quest::before { content: ''; position: absolute; left: var(--pad); right: var(--pad); top: 0; border-top: 1px solid var(--line); }
-  /* Nib's head peeks over the section line: visible if you look, easy to scroll past. */
-  .peek {
-    position: absolute; right: var(--pad); top: -30px; width: 56px; height: 56px; padding: 0; border: 0; background: none;
-    cursor: pointer; clip-path: inset(0 0 26px 0); transition: transform 0.25s ease, clip-path 0.25s ease;
-  }
-  .peek img { width: 56px; height: 56px; display: block; animation: peek-bob 7s ease-in-out infinite; }
-  .peek:hover, .peek:focus-visible, .peek.found { transform: translateY(-8px); clip-path: inset(0 0 0 0); }
-  .peek-tip {
-    position: absolute; right: 64px; top: 10px; white-space: nowrap; font: 400 13px var(--mono); color: var(--muted);
-    opacity: 0; transition: opacity 0.2s;
-  }
-  .peek:hover .peek-tip, .peek:focus-visible .peek-tip { opacity: 1; }
-  @keyframes peek-bob { 0%, 86%, 100% { transform: translateY(0); } 90% { transform: translateY(-5px); } 94% { transform: translateY(0); } }
 
-  .game { padding-top: 48px; }
-  .game[hidden] { display: none; }
   .game-head { display: grid; grid-template-columns: 150px 1fr; gap: 32px; align-items: center; }
   .nib :global(svg) { width: 100%; height: auto; display: block; }
   .rules { max-width: 46em; margin-top: 10px; }
@@ -190,7 +161,6 @@ const lines: [string, boolean][] = [
     .log :global(.line) { font-size: 12px; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .peek img, .log :global(.line) { animation: none; }
-    .peek { transition: none; }
+    .log :global(.line) { animation: none; }
   }
 </style>

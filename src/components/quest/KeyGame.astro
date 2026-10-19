@@ -1,0 +1,112 @@
+---
+// Scribe's side quest: "Where does it live?". Sort each piece of a meeting's data, and each key,
+// into the place Scribe actually keeps it. Answers follow Scribe's code (storage, edge functions, schema).
+import QuestShell from './QuestShell.astro';
+
+const places = { phone: 'On your phone', server: 'On Scribe’s server', sync: 'Synced to your account' } as const;
+const items: [string, keyof typeof places, string][] = [
+  ['The audio recording of your meeting', 'phone',
+    'Recorded and kept on the phone. It is sent to Groq to be transcribed, but never stored in the cloud.'],
+  ['Scribe’s shared Groq API key', 'server',
+    'Only in a server-side secret, read by an edge function after it checks you are signed in. A key inside an app can be pulled out by anyone with the APK.'],
+  ['The meeting transcript', 'sync',
+    'Saved on the phone first, then mirrored to your account, so it follows you to other devices.'],
+  ['Your own Groq API key, if you add one', 'phone',
+    'Kept in the app’s settings on your phone. Your requests then go straight to Groq and are billed to you, not through Scribe’s server.'],
+  ['The Supabase anon key', 'phone',
+    'Surprise: it ships inside the app on purpose. It can only reach what Row Level Security allows, so it is safe to be public.'],
+  ['Your folders and scheduled meetings', 'sync',
+    'Text only, synced to your account, and protected so each user can only ever read their own rows.'],
+];
+---
+
+<QuestShell id="key-game">
+  <img slot="peek" src="/brand/scribe-mark.png" alt="" width="56" height="56" />
+
+  <div class="kg" data-kg data-items={JSON.stringify(items)} data-places={JSON.stringify(places)}>
+    <p class="label">Side quest</p>
+    <h2>Where does it live?</h2>
+    <p class="intro">
+      A meeting app handles audio, text and secret keys. Put each one where Scribe actually keeps it. One of them is
+      a trick question.
+    </p>
+    <p class="score" aria-live="polite">Right <b data-kg-right>0</b> of <b>{items.length}</b></p>
+
+    <div class="card" data-kg-card>
+      <p class="item" data-kg-item>Ready?</p>
+      <div class="choices" data-kg-choices hidden>
+        {Object.entries(places).map(([k, label]) => <button type="button" class="btn" data-place={k}>{label}</button>)}
+      </div>
+      <p class="why" data-kg-why aria-live="polite"></p>
+      <div class="acts">
+        <button type="button" class="btn btn-solid" data-kg-go>Start</button>
+      </div>
+    </div>
+  </div>
+</QuestShell>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-kg]');
+  if (root) {
+    const items: [string, string, string][] = JSON.parse(root.dataset.items!);
+    const places: Record<string, string> = JSON.parse(root.dataset.places!);
+    const $ = <T extends HTMLElement>(s: string) => root.querySelector<T>(s)!;
+    const item = $('[data-kg-item]'), why = $('[data-kg-why]'), choices = $('[data-kg-choices]'), go = $<HTMLButtonElement>('[data-kg-go]');
+    let i = 0, right = 0, answered = false;
+
+    const show = () => {
+      answered = false;
+      item.textContent = items[i][0];
+      why.textContent = '';
+      why.className = 'why';
+      choices.hidden = false;
+      choices.querySelectorAll('button').forEach((b) => { b.disabled = false; b.classList.remove('picked', 'correct'); });
+      go.hidden = true;
+    };
+
+    choices.querySelectorAll<HTMLButtonElement>('[data-place]').forEach((b) =>
+      b.addEventListener('click', () => {
+        if (answered) return;
+        answered = true;
+        const [, answer, reason] = items[i];
+        const ok = b.dataset.place === answer;
+        if (ok) right++;
+        $('[data-kg-right]').textContent = `${right}`;
+        b.classList.add('picked');
+        choices.querySelector(`[data-place="${answer}"]`)!.classList.add('correct');
+        choices.querySelectorAll('button').forEach((x) => (x.disabled = true));
+        why.className = `why ${ok ? 'ok' : 'no'}`;
+        why.innerHTML = `<b>${ok ? 'Right.' : `Not quite: ${places[answer].toLowerCase()}.`}</b> ${reason}`;
+        go.hidden = false;
+        go.textContent = i === items.length - 1 ? 'See how you did' : 'Next';
+      }),
+    );
+
+    go.addEventListener('click', () => {
+      if (go.textContent === 'Start' || go.textContent === 'Play again') { i = 0; right = 0; $('[data-kg-right]').textContent = '0'; return show(); }
+      if (i < items.length - 1) { i++; return show(); }
+      choices.hidden = true;
+      item.textContent = right === items.length ? 'All six. You could have designed Scribe.' : `${right} of ${items.length}.`;
+      why.className = 'why';
+      why.innerHTML = 'That is Scribe’s whole design: audio stays home, text follows you, and the key that can spend money never leaves the server. The story of how that last rule came about is in <a href="#the-problem">the problem</a> chapter.';
+      go.textContent = 'Play again';
+    });
+  }
+</script>
+
+<style>
+  .kg h2 { margin: 6px 0 12px; }
+  .intro { max-width: 46em; }
+  .score { font: 400 14px var(--mono); color: var(--muted); }
+  .score b { color: var(--ink); font-weight: 500; }
+  .card { margin-top: 20px; border: 1.5px solid var(--ink); background: var(--surface); padding: 24px; max-width: 760px; }
+  .item { font-family: var(--serif); font-size: clamp(24px, 3vw, 32px); line-height: 1.2; margin: 0 0 18px; }
+  .choices { display: flex; flex-wrap: wrap; gap: 10px; }
+  .choices[hidden] { display: none; }
+  .choices button:disabled { cursor: default; opacity: 0.55; }
+  .choices button:global(.correct) { opacity: 1; background: #1f8a4c; border-color: #1f8a4c; color: #fff; }
+  .choices button:global(.picked:not(.correct)) { opacity: 1; background: #fbeceb; border-color: #c93a32; color: #c93a32; }
+  .why { margin: 16px 0 0; min-height: 3em; max-width: 46em; }
+  .acts { margin-top: 16px; }
+  .acts [hidden] { display: none; }
+</style>

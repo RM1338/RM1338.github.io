@@ -1,0 +1,154 @@
+---
+// Crewbo's side quest: "Air traffic control". Agents ask to edit files; the player allows or refuses each
+// request, which is the call Crewbo's hook makes on every edit. Bo is drawn by Crewbo's own bo.js.
+import QuestShell from './QuestShell.astro';
+import { boSVG, TEAM_COLORS } from '../../lib/crewbo/bo.js';
+import '../../lib/crewbo/bo.css';
+
+const [cobalt, teal, , ember] = TEAM_COLORS;
+const agents = { riya: cobalt.base, dev: teal.base, maya: ember.base } as const;
+const faces = Object.fromEntries(
+  Object.entries(agents).map(([name, color]) => [name, boSVG({ state: 'working', color, size: 100, title: `${name}'s agent` })]),
+);
+// Starting claims, then the stream of events. "done" events release a file on their own.
+const start = { 'src/auth/session.ts': 'riya', 'src/api/limits.ts': 'dev', 'README.md': '', 'emails/welcome.md': '' };
+const events = [
+  ['req', 'maya', 'README.md'],
+  ['req', 'maya', 'src/auth/session.ts'],
+  ['req', 'riya', 'src/auth/session.ts'],
+  ['req', 'dev', 'emails/welcome.md'],
+  ['req', 'riya', 'src/api/limits.ts'],
+  ['done', 'dev', 'src/api/limits.ts'],
+  ['req', 'riya', 'src/api/limits.ts'],
+  ['req', 'maya', 'emails/welcome.md'],
+  ['done', 'riya', 'src/auth/session.ts'],
+  ['req', 'maya', 'src/auth/session.ts'],
+  ['req', 'dev', 'README.md'],
+  ['req', 'dev', 'emails/welcome.md'],
+];
+---
+
+<QuestShell id="claims-game" still>
+  <span slot="peek" set:html={boSVG({ state: 'idle', size: 56, title: '' })} />
+
+  <div class="cg" data-cg data-start={JSON.stringify(start)} data-events={JSON.stringify(events)} data-colors={JSON.stringify(agents)} data-faces={JSON.stringify(faces)}>
+    <div class="cg-head">
+      <p class="label">Side quest</p>
+      <h2>Air traffic control.</h2>
+      <p>
+        Three teammates’ AI agents are working on one repository. Each time an agent asks to edit a file, you decide:
+        allow it, or refuse because someone else is already working on it. Crewbo makes this call on every edit.
+      </p>
+      <div class="score" aria-live="polite">
+        <span>Collisions stopped <b data-cg-stop>0</b></span><span>Collisions caused <b data-cg-crash>0</b></span><span>Work blocked for nothing <b data-cg-block>0</b></span>
+      </div>
+    </div>
+
+    <div class="cg-body">
+      <div class="files">
+        <p class="label">Who is working on what</p>
+        <ul data-cg-files></ul>
+      </div>
+      <div class="desk">
+        <div class="req" data-cg-req>
+          <p class="muted">Agents are waiting. Start when you are ready.</p>
+        </div>
+        <div class="acts">
+          <button type="button" class="btn btn-solid" data-cg-allow hidden>Allow</button>
+          <button type="button" class="btn" data-cg-refuse hidden>Refuse</button>
+          <button type="button" class="btn btn-solid" data-cg-go>Start</button>
+        </div>
+        <pre class="said" data-cg-said aria-live="polite"></pre>
+      </div>
+    </div>
+  </div>
+</QuestShell>
+
+<script>
+  type Ev = ['req' | 'done', string, string];
+  const root = document.querySelector<HTMLElement>('[data-cg]');
+  if (root) {
+    const start: Record<string, string> = JSON.parse(root.dataset.start!);
+    const events: Ev[] = JSON.parse(root.dataset.events!);
+    const colors: Record<string, string> = JSON.parse(root.dataset.colors!);
+    const faces: Record<string, string> = JSON.parse(root.dataset.faces!);
+    const $ = <T extends HTMLElement>(s: string) => root.querySelector<T>(s)!;
+    const files = $('[data-cg-files]'), req = $('[data-cg-req]'), said = $('[data-cg-said]');
+    const allow = $<HTMLButtonElement>('[data-cg-allow]'), refuse = $<HTMLButtonElement>('[data-cg-refuse]'), go = $<HTMLButtonElement>('[data-cg-go]');
+    let held: Record<string, string> = {}, i = 0, stop = 0, crash = 0, block = 0;
+    const short = (p: string) => p.split('/').pop();
+
+    const paint = () => {
+      files.innerHTML = Object.entries(held).map(([f, who]) =>
+        `<li><span class="mono">${f}</span>${who ? `<span class="who" style="--c:${colors[who]}">${who}</span>` : '<span class="free">free</span>'}</li>`).join('');
+      $('[data-cg-stop]').textContent = `${stop}`; $('[data-cg-crash]').textContent = `${crash}`; $('[data-cg-block]').textContent = `${block}`;
+    };
+
+    const next = () => {
+      // Releases happen on their own; show them and move on to the next request.
+      while (i < events.length && events[i][0] === 'done') {
+        const [, who, f] = events[i++];
+        if (held[f] === who) held[f] = '';
+        said.textContent = `${who}’s agent finished. ${short(f)} is free again.`;
+      }
+      paint();
+      if (i >= events.length) return finish();
+      const [, who, f] = events[i];
+      req.innerHTML = `<div class="bo">${faces[who]}</div><p><b>${who}’s agent</b> wants to edit<br><span class="mono">${f}</span></p>`;
+      allow.hidden = refuse.hidden = false;
+      allow.focus({ preventScroll: true });
+    };
+
+    const decide = (yes: boolean) => {
+      const [, who, f] = events[i++];
+      const holder = held[f];
+      const clash = holder !== '' && holder !== who;
+      if (yes && !clash) { held[f] = who; said.textContent = `Edit allowed. ${short(f)} is claimed by ${who}’s agent now.`; }
+      else if (yes && clash) { crash++; said.textContent = `Collision. ${holder}’s agent was already editing ${short(f)}, and now two agents have written the same file. Someone finds out at merge time.`; }
+      else if (!yes && clash) { stop++; said.textContent = `Refused. This is what ${who}’s agent is told:\n${f} is claimed by ${holder}’s agent (Crewbo). Work on other files, or ask them to hand it over: crewbo claim request ${f}`; }
+      else { block++; said.textContent = holder === who ? `${who}’s agent already holds ${short(f)}. You blocked its own work.` : `${short(f)} was free. You blocked work for nothing.`; }
+      next();
+    };
+
+    const finish = () => {
+      allow.hidden = refuse.hidden = true;
+      go.hidden = false; go.textContent = 'Play again';
+      const total = events.filter((e) => e[0] === 'req').length;
+      const clean = crash === 0 && block === 0;
+      req.innerHTML = `<p><b>${clean ? 'Perfect: no collisions, nobody blocked.' : `${crash} collision${crash === 1 ? '' : 's'}, ${block} blocked for nothing.`}</b></p>`;
+      said.textContent = `You made ${total} calls by hand. Crewbo makes this one on every edit, for every agent, in a few milliseconds, and tells the refused agent exactly who has the file. Leases mean a crashed agent cannot hold a file forever, either.`;
+    };
+
+    allow.addEventListener('click', () => decide(true));
+    refuse.addEventListener('click', () => decide(false));
+    go.addEventListener('click', () => {
+      held = { ...start }; i = 0; stop = crash = block = 0; said.textContent = '';
+      go.hidden = true;
+      next();
+    });
+    held = { ...start }; paint();
+  }
+</script>
+
+<style>
+  .cg-head p { max-width: 46em; }
+  .cg-head h2 { margin: 6px 0 12px; }
+  .score { display: flex; flex-wrap: wrap; gap: 8px 28px; font: 400 14px var(--mono); color: var(--muted); }
+  .score b { color: var(--ink); font-weight: 500; }
+  .cg-body { display: grid; grid-template-columns: 1fr 1.2fr; gap: 24px; margin-top: 28px; }
+  .files { border: 1.5px solid var(--ink); background: var(--surface); padding: 18px 20px; }
+  .files ul { list-style: none; margin: 10px 0 0; padding: 0; }
+  .files :global(li) { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+  .files :global(.mono) { font-size: 14px; overflow-wrap: anywhere; }
+  .files :global(.who) { color: #fff; background: var(--c); padding: 2px 10px; border-radius: 999px; font-size: 13px; white-space: nowrap; }
+  .files :global(.free) { color: var(--muted); font-size: 13px; }
+  .desk { border: 1.5px solid var(--ink); background: var(--surface); padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
+  .req { min-height: 96px; display: flex; align-items: center; gap: 16px; font-size: 18px; line-height: 1.4; }
+  .req :global(.bo) { width: 64px; flex: none; }
+  .req :global(.bo svg) { width: 100%; height: auto; display: block; }
+  .req :global(p) { margin: 0; }
+  .acts { display: flex; gap: 12px; }
+  .acts [hidden] { display: none; }
+  .said { margin: 0; min-height: 110px; background: #141414; color: #e8e8e4; padding: 14px; border-radius: 10px; font: 13px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+  @media (max-width: 760px) { .cg-body { grid-template-columns: 1fr; } }
+</style>

@@ -1,5 +1,6 @@
 ---
 import Chapter from './Chapter.astro';
+import ClaimsGame from '../quest/ClaimsGame.astro';
 import { boSVG, markSVG, TEAM_COLORS } from '../../lib/crewbo/bo.js';
 import '../../lib/crewbo/bo.css';
 
@@ -110,6 +111,8 @@ export const session = newSession(config.auth)
     a conflict before anyone merges.
   </p>
 </Chapter>
+
+<ClaimsGame />
 
 <Chapter n="04" kicker="My role" title="I founded it, designed it, and set the rules it is built by.">
   <Fragment slot="panel">

@@ -1,5 +1,6 @@
 ---
 import Chapter from './Chapter.astro';
+import KeyGame from '../quest/KeyGame.astro';
 
 const pipeline = [
   ['Record', 'audio file on the phone'],
@@ -91,6 +92,8 @@ $ unzip -p scribe.apk | strings | grep gsk_
     through a server-side proxy that holds the shared key and only answers signed-in users.
   </p>
 </Chapter>
+
+<KeyGame />
 
 <Chapter n="04" kicker="My role" title="I built and shipped it on my own.">
   <Fragment slot="panel">
