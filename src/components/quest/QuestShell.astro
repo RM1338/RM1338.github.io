@@ -1,5 +1,5 @@
 ---
-// A side quest's frame: a character peeks over a line; clicking it slides the game (default slot) open in place.
+// A side quest's frame: a character peeks over a line; clicking it slides the game (default slot) open, and again to close.
 // In a case study the line is the next chapter's own top border; on the home page the frame draws its own (`line`).
 interface Props {
   id: string;
@@ -21,7 +21,6 @@ const { id, tip = 'psst · side quest', still = false, line = false } = Astro.pr
   <div class="fold" id={id} data-q-body inert>
     <div class="fold-inner">
       <div class="game"><slot /></div>
-      <button type="button" class="close" data-q-close>Close</button>
     </div>
   </div>
 </div>
@@ -41,7 +40,6 @@ const { id, tip = 'psst · side quest', still = false, line = false } = Astro.pr
       q.dispatchEvent(new CustomEvent(show ? 'quest-open' : 'quest-close'));
     };
     open.addEventListener('click', () => set(!q.classList.contains('open')));
-    q.querySelector('[data-q-close]')!.addEventListener('click', () => { set(false); open.focus({ preventScroll: true }); });
   }
 </script>
 
@@ -66,9 +64,7 @@ const { id, tip = 'psst · side quest', still = false, line = false } = Astro.pr
   .fold { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.45s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.3s ease; }
   .quest:global(.open) .fold { grid-template-rows: 1fr; opacity: 1; }
   .fold-inner { overflow: hidden; min-height: 0; }
-  .game { padding: 56px 0 8px; }
-  .close { margin: 16px 0 72px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--muted); cursor: pointer; font-size: 14px; }
-  .close:hover { color: var(--ink); border-color: var(--ink); }
+  .game { padding: 56px 0 72px; }
   .fold { scroll-margin-top: calc(var(--nav-h) + var(--strip-h, 0px) + 24px); }
   @media (prefers-reduced-motion: reduce) { .peek-art { animation: none; } .peek, .fold { transition: none; } }
 </style>
