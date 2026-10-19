@@ -33,7 +33,7 @@ const id = kicker.toLowerCase().replaceAll(' ', '-');
   }
   .chapter:nth-of-type(even) { grid-template-columns: 5fr 6fr; }
   .chapter:nth-of-type(even) .panel { order: 2; }
-  .panel { margin: 0; border: 1.5px solid var(--ink); background: var(--surface); }
+  .panel { margin: 0; border: 1.5px solid var(--ink); background: var(--surface); container-type: inline-size; }
   .panel-head {
     display: flex;
     justify-content: space-between;
@@ -44,6 +44,7 @@ const id = kicker.toLowerCase().replaceAll(' ', '-');
     letter-spacing: 0.06em;
   }
   .panel-body {
+    --t: 1cqw; /* panel text scale: one unit of panel width, larger on phones (below) */
     container-type: inline-size;
     position: relative;
     aspect-ratio: 4 / 3;
@@ -62,24 +63,31 @@ const id = kicker.toLowerCase().replaceAll(' ', '-');
   /* Shared panel vocabulary, sized in cqw so every panel scales with its frame.
      .pg lays a panel out on a grid with even margins; everything inside flows in it. */
   .panel-body :global(.pg) { position: absolute; inset: 6cqw 6cqw 9cqw; display: grid; gap: 3cqw; align-content: center; align-items: center; }
-  .panel-body :global(.pcap) { position: absolute; left: 6cqw; bottom: 3cqw; font: 500 2.2cqw/1 var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
-  .panel-body :global(.card) { background: var(--surface); border: 1.5px solid var(--ink); padding: 2.4cqw 2.8cqw; font-size: 2.7cqw; line-height: 1.35; display: flex; flex-direction: column; gap: 0.6cqw; }
-  .panel-body :global(.sub) { display: block; font-size: 2.3cqw; color: var(--muted); }
-  .panel-body :global(.term) { background: #141414; color: #e8e8e4; padding: 3cqw 3.4cqw; font: 2.5cqw/1.55 var(--mono); white-space: pre-wrap; }
+  .panel-body :global(.pcap) { position: absolute; left: 6cqw; bottom: 3cqw; font: 500 calc(2.2 * var(--t))/1 var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  .panel-body :global(.card) { background: var(--surface); border: 1.5px solid var(--ink); padding: 2.4cqw 2.8cqw; font-size: calc(2.7 * var(--t)); line-height: 1.35; display: flex; flex-direction: column; gap: 0.6cqw; }
+  .panel-body :global(.sub) { display: block; font-size: calc(2.3 * var(--t)); color: var(--muted); }
+  .panel-body :global(.term) { background: #141414; color: #e8e8e4; padding: 3cqw 3.4cqw; font: calc(2.5 * var(--t))/1.55 var(--mono); white-space: pre-wrap; }
   .panel-body :global(.term .r) { color: #ff7b72; }
   .panel-body :global(.term .g) { color: #7ee2a8; }
   .panel-body :global(.term .m) { color: #8f8f8f; }
-  .panel-body :global(.bubble) { background: var(--ink); color: var(--bg); padding: 2cqw 2.6cqw; font: 600 2.8cqw/1.3 var(--sans); }
-  .panel-body :global(.tag) { justify-self: end; background: var(--accent); color: #141414; padding: 1.2cqw 1.8cqw; font: 600 2.3cqw/1.3 var(--mono); }
+  .panel-body :global(.bubble) { background: var(--ink); color: var(--bg); padding: 2cqw 2.6cqw; font: 600 calc(2.8 * var(--t))/1.3 var(--sans); }
+  .panel-body :global(.tag) { justify-self: end; background: var(--accent); color: #141414; padding: 1.2cqw 1.8cqw; font: 600 calc(2.3 * var(--t))/1.3 var(--mono); }
   .panel-body :global(.mono) { font-family: var(--mono); }
-  .panel-body :global(.label-sm) { font: 500 2.2cqw/1 var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
-  .panel-body :global(.flow-arrow) { font: 600 4cqw/1 var(--sans); text-align: center; }
+  .panel-body :global(.label-sm) { font: 500 calc(2.2 * var(--t))/1 var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+  .panel-body :global(.flow-arrow) { font: 600 calc(4 * var(--t))/1 var(--sans); text-align: center; }
   .panel-body :global(.phone) { width: 100%; max-width: 30cqw; aspect-ratio: 1 / 1.9; justify-self: center; border: 1.1cqw solid #2b2b2b; border-radius: 3.6cqw; background: var(--surface); padding: 3.6cqw 2.2cqw; display: flex; flex-direction: column; gap: 1.6cqw; }
   /* Ledger: one shared number column, sized to the widest number and right-aligned, so digits line up
      and every label starts at the same short distance from its number. */
   .panel-body :global(.ledger) { position: absolute; inset: 6cqw 8cqw; display: grid; grid-template-columns: max-content 1fr; column-gap: 3.5cqw; row-gap: 1.6cqw; align-content: center; }
-  .panel-body :global(.ledger div) { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: baseline; border-bottom: 1px solid var(--line); padding-bottom: 1.6cqw; font-size: 3cqw; }
-  .panel-body :global(.ledger span) { font: 400 6.5cqw/1 var(--serif); letter-spacing: -0.02em; text-align: right; }
+  .panel-body :global(.ledger div) { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: baseline; border-bottom: 1px solid var(--line); padding-bottom: 1.6cqw; font-size: calc(3 * var(--t)); }
+  .panel-body :global(.ledger span) { font: 400 calc(6.5 * var(--t))/1 var(--serif); letter-spacing: -0.02em; text-align: right; }
+
+  /* On narrow screens panel text would shrink to ~9px. Give the panel more height and scale only the text up.
+     The Crewbo diagram keeps 4:3, because its wires are drawn to exact box positions. */
+  @container (max-width: 560px) {
+    .panel-body { aspect-ratio: 1 / 1.08; --t: 1.45cqw; }
+    .panel-body:has(.wires) { aspect-ratio: 4 / 3; --t: 1.2cqw; }
+  }
 
   @media (max-width: 900px) {
     .chapter, .chapter:nth-of-type(even) { grid-template-columns: 1fr; gap: 24px; padding: 48px 0; }

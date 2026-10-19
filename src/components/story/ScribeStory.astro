@@ -161,13 +161,13 @@ $ unzip -p scribe.apk | strings | grep gsk_
 
 <style>
   .card.note { gap: 2.6cqw; transform: rotate(-2deg); }
-  .scrawl { font: italic 500 3cqw/1.2 var(--sans); }
+  .scrawl { font: italic 500 calc(3 * var(--t))/1.2 var(--sans); }
   .scrawl.x { text-decoration: line-through; color: var(--muted); }
   .rec-phone { align-items: center; gap: 4cqw; }
   .wave { display: flex; align-items: center; gap: 0.6cqw; height: 16cqw; width: 100%; }
   .wave i { flex: 1; background: var(--ink); }
   .rec { margin-top: auto; width: 10cqw; height: 10cqw; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 1.4cqw rgb(255 90 31 / 0.2); }
-  .chip { align-self: flex-start; margin-top: 1cqw; border: 1px solid var(--ink); padding: 0.6cqw 1.2cqw; font-size: 2cqw; }
+  .chip { align-self: flex-start; margin-top: 1cqw; border: 1px solid var(--ink); padding: 0.6cqw 1.2cqw; font-size: calc(2 * var(--t)); }
   .stack { display: grid; grid-auto-rows: 1fr; gap: 2cqw; }
   .stage { justify-content: center; }
   .wide { width: 76cqw; align-items: center; text-align: center; }

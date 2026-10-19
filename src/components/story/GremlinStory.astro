@@ -106,7 +106,7 @@ const gates = ['signal gone on replay', 'screen still looks like itself', 'nothi
 
 <Chapter n="05" kicker="Under the hood" title="Observe, decide, act, check. Then three gates.">
   <Fragment slot="panel">
-    <div class="pg" style="grid-template-columns:repeat(4,1fr);gap:3cqw 4cqw">
+    <div class="pg loop">
       {
         loop.map(([t, d]) => (
           <div class="card step">
@@ -175,15 +175,22 @@ const gates = ['signal gone on replay', 'screen still looks like itself', 'nothi
   .bar { height: 2cqw; background: var(--line); }
   .bar.s { width: 60%; }
   .item { height: 10cqw; border: 1px solid var(--line); }
-  .pay { margin-top: auto; position: relative; height: 6.4cqw; background: var(--ink); color: var(--bg); font: 600 2.3cqw/6.4cqw var(--sans); padding-left: 2cqw; overflow: hidden; white-space: nowrap; }
+  .pay { margin-top: auto; position: relative; height: 6.4cqw; background: var(--ink); color: var(--bg); font: 600 calc(2.3 * var(--t))/calc(6.4 * var(--t)) var(--sans); padding-left: 2cqw; overflow: hidden; white-space: nowrap; }
   .stripes { position: absolute; right: 0; top: 0; bottom: 0; width: 7cqw; background: repeating-linear-gradient(45deg, #f5c400 0 1.2cqw, #141414 1.2cqw 2.4cqw); }
   .col { display: grid; gap: 3cqw; }
   .bad { border-color: var(--accent); }
   .card.half { align-items: center; justify-content: space-between; text-align: center; }
   .nib { width: 100%; max-width: 24cqw; justify-self: center; }
   .nib :global(svg) { width: 100%; height: auto; display: block; }
-  .logline { background: #141414; color: #ff7b72; padding: 2cqw; font-size: 2.3cqw; text-align: left; }
+  .logline { background: #141414; color: #ff7b72; padding: 2cqw; font-size: calc(2.3 * var(--t)); text-align: left; }
+  .loop { grid-template-columns: repeat(4, 1fr); gap: 3cqw 4cqw; }
   .card.step { height: 17cqw; justify-content: flex-start; position: relative; }
-  .step:not(:nth-child(4))::after { content: '→'; position: absolute; right: -3.6cqw; top: 50%; transform: translateY(-50%); font: 600 3cqw/1 var(--sans); }
+  /* Phones: the loop goes two by two and the boxes size to their text. */
+  @container (max-width: 560px) {
+    .loop { grid-template-columns: 1fr 1fr; gap: 2.4cqw 6cqw; }
+    .card.step { height: auto; min-height: 15cqw; }
+    .card.step:nth-child(2)::after { display: none; }
+  }
+  .step:not(:nth-child(4))::after { content: '→'; position: absolute; right: -3.6cqw; top: 50%; transform: translateY(-50%); font: 600 calc(3 * var(--t))/1 var(--sans); }
   .gate { padding: 1.6cqw 2.4cqw; }
 </style>
