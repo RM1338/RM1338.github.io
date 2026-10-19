@@ -76,9 +76,11 @@ const id = kicker.toLowerCase().replaceAll(' ', '-');
   .panel-body :global(.label-sm) { font: 500 2.2cqw/1 var(--mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
   .panel-body :global(.flow-arrow) { font: 600 4cqw/1 var(--sans); text-align: center; }
   .panel-body :global(.phone) { width: 100%; max-width: 30cqw; aspect-ratio: 1 / 1.9; justify-self: center; border: 1.1cqw solid #2b2b2b; border-radius: 3.6cqw; background: var(--surface); padding: 3.6cqw 2.2cqw; display: flex; flex-direction: column; gap: 1.6cqw; }
-  .panel-body :global(.ledger) { position: absolute; inset: 6cqw; display: grid; gap: 1.2cqw; align-content: center; }
-  .panel-body :global(.ledger div) { display: grid; grid-template-columns: 16cqw 1fr; align-items: baseline; border-bottom: 1px solid var(--line); padding-bottom: 1.2cqw; font-size: 2.9cqw; }
-  .panel-body :global(.ledger span) { font: 800 6cqw/1 var(--sans); letter-spacing: -0.03em; }
+  /* Ledger: one shared number column, sized to the widest number and right-aligned, so digits line up
+     and every label starts at the same short distance from its number. */
+  .panel-body :global(.ledger) { position: absolute; inset: 6cqw 8cqw; display: grid; grid-template-columns: max-content 1fr; column-gap: 3.5cqw; row-gap: 1.6cqw; align-content: center; }
+  .panel-body :global(.ledger div) { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: baseline; border-bottom: 1px solid var(--line); padding-bottom: 1.6cqw; font-size: 3cqw; }
+  .panel-body :global(.ledger span) { font: 400 6.5cqw/1 var(--serif); letter-spacing: -0.02em; text-align: right; }
 
   @media (max-width: 900px) {
     .chapter, .chapter:nth-of-type(even) { grid-template-columns: 1fr; gap: 24px; padding: 48px 0; }

@@ -9,11 +9,6 @@ import { contributions } from '../lib/github';
 const work = (await getCollection('work')).sort((a, b) => a.data.order - b.data.order);
 const [flagship, ...rest] = work;
 
-const capabilities = [
-  { title: 'Grounded AI', text: 'Bugs found by the app’s own log, edits stopped by hooks. Never a model’s opinion of what is broken.' },
-  { title: 'Cross-platform systems', text: 'A Go daemon, sync server and hook adapters for three coding agents on Linux, macOS and Windows.' },
-  { title: 'Research to release', text: 'Ten user interviews and a go/no-go gate before Crewbo’s first line; three public releases of Scribe.' },
-];
 
 // Every date below is from a repository's git history or a published release.
 const activity = await contributions();
@@ -50,51 +45,42 @@ const posts = [
   },
 ];
 
-const steps = [
-  { n: '01', title: 'Research', text: 'Interviews and throwaway spikes on every OS before any plan.' },
-  { n: '02', title: 'Decide', text: 'A decision record for anything costly to reverse; a gate before each milestone.' },
-  { n: '03', title: 'Build', text: 'Small changes under written rules: verify every fact, claim nothing that was not run.' },
-  { n: '04', title: 'Verify', text: 'Live checks across machines and operating systems before anything merges.' },
-];
 ---
 
 <Base
   title="Ronel Abraham Mathew · AI Engineer"
-  description="AI Engineer and founder of Crewbo. I build agents, and the checks that make them safe to trust."
+  description="Software engineer and product builder working on agentic AI. Building Crewbo, so a whole team can run their coding agents on one codebase without collisions."
 >
   <section class="hero wrap">
-    <div class="status-bar">
-      <div class="fact fact-accent"><span class="label">Building</span><span>Crewbo</span></div>
-      <div class="fact"><span class="label">Role</span><span>AI Engineer</span></div>
-      <div class="fact"><span class="label">Open to</span><span>AI Engineer roles</span></div>
-      <a class="btn btn-solid get" href="mailto:rma80070@gmail.com">Get in touch</a>
-    </div>
-    <p class="label kicker">AI Engineer · Founder of Crewbo</p>
-    <h1>I build agents, and the checks that make them safe to trust.</h1>
-    <p class="sub">
-      Tools for AI coding agents: safe to run side by side in a team, and checked against ground truth instead
-      of a model’s opinion.
+    <h1>Ronel Abraham Mathew</h1>
+    <p class="say">/roʊˈnɛl/ · <i>noun</i> · Bengaluru · <time id="clock">IST</time></p>
+    <p class="defs">
+      A software engineer and <a href="https://en.wikipedia.org/wiki/Product_design">product builder</a> working on
+      agentic AI, and a <a href="https://en.wikipedia.org/wiki/Polymath">polymath</a> who bridges code architecture
+      with real-world projects. Right now that’s <a href="/work/crewbo">Crewbo</a>, so a whole team can run their
+      coding agents on one codebase without collisions. Before that, <a href="/work/gremlin">Gremlin</a> and
+      <a href="/work/scribe">Scribe</a>.
     </p>
+    <p class="meta">AI Engineer Trainee at Karunya Innovation and Design Studio · B.Tech CSE at Karunya</p>
     <div class="ctas">
-      <a class="btn btn-solid" href="/work/crewbo">See Crewbo</a>
+      <a class="btn btn-solid" href="#work">See my work</a>
       {hasResume && <a class="btn" href="/resume.pdf" target="_blank" rel="noopener">Résumé ↗</a>}
       <a class="mail" href="mailto:rma80070@gmail.com">rma80070@gmail.com</a>
     </div>
   </section>
 
-  <section class="caps wrap" aria-label="Capabilities">
-    {
-      capabilities.map((c) => (
-        <div class="cap">
-          <h3 class="label">{c.title}</h3>
-          <p>{c.text}</p>
-        </div>
-      ))
-    }
-  </section>
+  <script>
+    // Live Bengaluru time beside the pronunciation, updated each minute.
+    const clock = document.getElementById('clock');
+    const tick = () => {
+      if (clock) clock.textContent = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }) + ' IST';
+    };
+    tick();
+    setInterval(tick, 30_000);
+  </script>
 
   <section class="work wrap" id="work">
-    <p class="label">01 Selected work</p>
+    <p class="label">Selected work</p>
     {
       [flagship, ...rest].map((p, i) => (
         <article class:list={['card', { 'card-flagship': i === 0 }]}>
@@ -124,7 +110,7 @@ const steps = [
   </section>
 
   <section class="tools wrap" id="toolbox">
-    <p class="label">02 Toolbox</p>
+    <p class="label">Toolbox</p>
     <h2>What I build with, and where you can see it.</h2>
     <div class="tool-grid">
       {
@@ -146,7 +132,7 @@ const steps = [
   </section>
 
   <section class="tl wrap" id="timeline">
-    <p class="label">03 Timeline</p>
+    <p class="label">Timeline</p>
     <h2>2026, in order.</h2>
     <ol>
       {
@@ -176,7 +162,7 @@ const steps = [
   </section>
 
   <section class="writing wrap" id="writing">
-    <p class="label">04 Writing</p>
+    <p class="label">Writing</p>
     <h2>Notes from the field.</h2>
     {
       posts.map((p) => (
@@ -191,25 +177,8 @@ const steps = [
     <p><a href="https://medium.com/@ronelmathew">All posts on Medium ↗</a></p>
   </section>
 
-  <section class="how wrap" id="how">
-    <p class="label">05 How I work</p>
-    <h2>Rules first, then code, then proof.</h2>
-    <ol class="steps">
-      {
-        steps.map((s) => (
-          <li>
-            <span class="label">{s.n}</span>
-            <h3>{s.title}</h3>
-            <p>{s.text}</p>
-          </li>
-        ))
-      }
-    </ol>
-    <p class="muted">The full record for Crewbo is in its <a href="/work/crewbo">case study</a>.</p>
-  </section>
-
   <section class="about wrap" id="about">
-    <p class="label">06 About</p>
+    <p class="label">About</p>
     <div class="about-text">
       <p>
         I’m Ronel. I build software that lets AI agents act without asking anyone to trust their judgement. That
@@ -239,41 +208,18 @@ const steps = [
 </Base>
 
 <style>
-  .hero { padding-top: 24px; }
-  .status-bar {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
-    gap: 16px;
-    align-items: start;
-    padding-bottom: 96px;
-  }
-  .fact { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; }
-  .fact-accent { background: var(--accent); color: #141414; }
-  .fact-accent .label { color: #141414; opacity: 0.7; }
-  .get { align-self: center; }
-  .kicker { margin-bottom: 20px; }
-  h1 {
-    font-size: clamp(48px, 9vw, 136px);
-    font-weight: 800;
-    letter-spacing: -0.045em;
-    line-height: 0.95;
-    max-width: 14ch;
-  }
-  .sub { font-size: clamp(18px, 2vw, 22px); max-width: 40ch; margin-top: 32px; color: var(--muted); }
-  .ctas { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin-top: 32px; }
-  .mail { font: 500 14px/1.4 var(--mono); }
+  .hero { padding-top: 112px; padding-bottom: 24px; }
+  .say { font: 400 15px/1.4 var(--mono); color: var(--muted); }
+  /* The hero reads as a dictionary entry: headword, pronunciation, then the definition. */
+  h1 { font-size: clamp(44px, 6.5vw, 80px); line-height: 1.05; }
+  .hero .say { margin: 14px 0 0; }
+  .say i { font-family: var(--serif); font-size: 17px; }
+  .defs { margin: 28px 0 0; max-width: 36em; font-size: clamp(19px, 2vw, 22px); line-height: 1.55; }
+  .defs a { text-decoration-color: var(--accent); text-decoration-thickness: 2px; text-underline-offset: 4px; }
+  .meta { font-size: 16px; color: var(--muted); margin-top: 20px; }
+  .ctas { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 32px; }
+  .mail { font-size: 16px; }
 
-  .caps {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    margin-top: 96px;
-    border-top: 1px solid var(--line);
-    border-bottom: 1px solid var(--line);
-  }
-  .cap { padding: 24px 24px 8px 0; }
-  .cap + .cap { padding-left: 24px; border-left: 1px solid var(--line); }
-  .cap h3 { color: var(--ink); margin-bottom: 8px; }
-  .cap p { font-size: 16px; color: var(--muted); }
 
   .work { margin-top: var(--section); display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
   .work > .label { grid-column: 1 / -1; }
@@ -315,14 +261,8 @@ const steps = [
   .post { display: grid; gap: 10px; padding: 28px; border: 1.5px solid var(--ink); background: var(--surface); text-decoration: none; max-width: 860px; margin-bottom: 20px; }
   .post:hover { border-color: var(--accent); }
   .post:hover .post-title { color: var(--accent); }
-  .post-title { font-size: clamp(22px, 2.6vw, 30px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; }
+  .post-title { font-family: var(--serif); font-size: clamp(24px, 2.8vw, 32px); font-weight: 400; letter-spacing: -0.01em; line-height: 1.2; }
   .post-tags { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
-  .how { margin-top: var(--section); }
-  .how h2 { margin: 16px 0 40px; max-width: 20ch; }
-  .steps { list-style: none; padding: 0; margin: 0 0 24px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
-  .steps li { border-top: 2px solid var(--ink); padding-top: 16px; }
-  .steps h3 { margin: 8px 0; }
-  .steps p { font-size: 16px; color: var(--muted); }
 
   .about { margin-top: var(--section); display: grid; grid-template-columns: 1fr 2fr; gap: 24px; }
   .about-text { max-width: 60ch; }
@@ -333,16 +273,9 @@ const steps = [
   @media (max-width: 960px) {
     .card-flagship { grid-template-columns: 1fr; }
     .card-flagship .card-media { border-right: 0; border-bottom: 1px solid var(--line); }
-    .steps { grid-template-columns: 1fr 1fr; }
-    .caps { grid-template-columns: 1fr; }
-    .cap + .cap { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); }
-  }
-  @media (max-width: 720px) {
-    .status-bar { grid-template-columns: 1fr 1fr; padding-bottom: 56px; }
-    .get { display: none; }
-    .fact-accent { grid-column: 1 / -1; }
+      @media (max-width: 720px) {
+    .hero { padding-top: 56px; }
     .work { grid-template-columns: 1fr; }
-    .steps { grid-template-columns: 1fr; }
-    .about { grid-template-columns: 1fr; }
+      .about { grid-template-columns: 1fr; }
   }
 </style>

@@ -1,8 +1,19 @@
+import { execFileSync } from 'node:child_process';
+
+/** Locally, fall back to the GitHub CLI's login so `npm run dev` shows the graph too. */
+function ghToken(): string | undefined {
+  try {
+    return execFileSync('gh', ['auth', 'token'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** One year of public GitHub contributions, fetched at build time. Null when no token is set, so the section hides. */
 export type Day = { date: string; count: number };
 
 export async function contributions(login = 'RM1338'): Promise<{ total: number; weeks: Day[][] } | null> {
-  const token = process.env.GITHUB_TOKEN;
+  const token = process.env.GITHUB_TOKEN || ghToken();
   if (!token) return null;
   const query = `query { user(login: "${login}") { contributionsCollection { contributionCalendar {
     totalContributions weeks { contributionDays { date contributionCount } } } } } }`;
