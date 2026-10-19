@@ -5,6 +5,7 @@ import { hasResume } from '../lib/site';
 import Ev from '../components/Ev.astro';
 import { figures } from '../components/figures';
 import { contributions } from '../lib/github';
+import SideQuest from '../components/quest/SideQuest.astro';
 
 const work = (await getCollection('work')).sort((a, b) => a.data.order - b.data.order);
 const [flagship, ...rest] = work;
@@ -107,6 +108,8 @@ const posts = [
       ))
     }
   </section>
+
+  <SideQuest />
 
   <section class="tools wrap" id="toolbox">
     <p class="label">Toolbox</p>
@@ -237,6 +240,7 @@ const posts = [
   .card-links { margin-top: auto; padding-top: 8px; display: flex; flex-wrap: wrap; gap: 8px 20px; font-weight: 500; }
 
   .tools { margin-top: var(--section); }
+  :global(.quest) + .tools { margin-top: 112px; }
   .tools h2 { margin: 16px 0 32px; max-width: 22ch; }
   .tool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0 32px; }
   .tool-group { border-top: 1.5px solid var(--ink); padding: 16px 0 24px; }

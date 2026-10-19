@@ -1,0 +1,196 @@
+---
+// Side quest, home page: Nib peeks over a section line; clicking him opens "Be the oracle",
+// a short game where the player flags real failure lines in a scrolling device log and ignores noise.
+// It is Gremlin's idea in miniature: detection is an exact match on what the framework says, not a hunch.
+import scout from '../../assets/nib/nib-explorer.svg?raw';
+import chaos from '../../assets/nib/nib-chaos.svg?raw';
+import success from '../../assets/nib/nib-success.svg?raw';
+
+// [log line, is it a real failure signal?] Signals use the strings Gremlin's Flutter oracle matches.
+const lines: [string, boolean][] = [
+  ['I/flutter: route /home', false],
+  ['D/EGL_emulation: app_time_stats: avg=16.61ms min=15.02ms max=18.40ms', false],
+  ['I/flutter: route /shop', false],
+  ['I/flutter: A RenderFlex overflowed by 42 pixels on the right.', true],
+  ['I/flutter: overflow menu opened', false],
+  ['I/ViewRootImpl: ViewPostIme pointer 0', false],
+  ['I/flutter: cart items = 2', false],
+  ['E/flutter: [ERROR] Unhandled Exception: Null check operator used on a null value', true],
+  ['D/ProfileInstaller: Installing profile for com.example.shop', false],
+  ['I/flutter: retrying request (attempt 2 of 3)', false],
+  ['I/Choreographer: Skipped 63 frames! The application may be doing too much work on its main thread.', true],
+  ['I/flutter: route /checkout', false],
+  ['I/flutter: user dismissed the error banner', false],
+  ['D/InputMethodManager: showSoftInput', false],
+  ['E/AndroidRuntime: FATAL EXCEPTION: main', true],
+  ['I/flutter: route /settings', false],
+  ['I/flutter: crash reporting enabled', false],
+  ['I/flutter: ══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞══', true],
+  ['D/EGL_emulation: app_time_stats: avg=16.70ms min=15.40ms max=19.02ms', false],
+  ['I/flutter: route /home', false],
+];
+---
+
+<section class="quest wrap" aria-label="Side quest">
+  <button type="button" class="peek" data-q-open aria-expanded="false" aria-controls="quest-game" title="Psst. Side quest?">
+    <img src="/brand/gremlin-mark.svg" alt="" width="56" height="56" />
+    <span class="peek-tip">psst · side quest</span>
+  </button>
+
+  <div class="game" id="quest-game" data-q-game data-lines={JSON.stringify(lines)} hidden>
+    <div class="game-head">
+      <div class="nib" data-q-nib>
+        <span data-pose="scout" set:html={scout} />
+        <span data-pose="chaos" hidden set:html={chaos} />
+        <span data-pose="success" hidden set:html={success} />
+      </div>
+      <div>
+        <p class="label">Side quest</p>
+        <h2>Be the oracle.</h2>
+        <p class="rules">
+          A device log is scrolling. Click every line where the app actually broke, and ignore the noise. Careful:
+          some lines only <i>sound</i> broken.
+        </p>
+        <div class="score" aria-live="polite">
+          <span>Caught <b data-q-hit>0</b></span><span>False alarms <b data-q-false>0</b></span><span>Missed <b data-q-miss>0</b></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="log" data-q-log role="list" aria-label="Device log"></div>
+
+    <div class="game-foot">
+      <button type="button" class="btn btn-solid" data-q-start>Start the log</button>
+      <p class="verdict" data-q-verdict aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-q-game]');
+  const open = document.querySelector<HTMLButtonElement>('[data-q-open]');
+  if (root && open) {
+    const lines: [string, boolean][] = JSON.parse(root.dataset.lines!);
+    const $ = (s: string) => root.querySelector<HTMLElement>(s)!;
+    const log = $('[data-q-log]'), startBtn = $('[data-q-start]') as HTMLButtonElement, verdict = $('[data-q-verdict]');
+    const total = lines.filter(([, bad]) => bad).length;
+    const VISIBLE = 7, TICK = 1100;
+    let hit = 0, falseAlarm = 0, miss = 0, i = 0, timer = 0;
+
+    const pose = (p: string) => root.querySelectorAll<HTMLElement>('[data-pose]').forEach((el) => (el.hidden = el.dataset.pose !== p));
+    const paint = () => { $('[data-q-hit]').textContent = `${hit} / ${total}`; $('[data-q-false]').textContent = `${falseAlarm}`; $('[data-q-miss]').textContent = `${miss}`; };
+
+    open.addEventListener('click', () => {
+      const show = root.hidden;
+      root.hidden = !show;
+      open.setAttribute('aria-expanded', String(show));
+      open.classList.toggle('found', true);
+      if (show) root.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+    });
+
+    const retire = (row: HTMLElement) => {
+      if (row.dataset.bad === '1' && !row.dataset.done) { miss++; row.classList.add('missed'); }
+      row.remove();
+    };
+
+    const push = () => {
+      if (i >= lines.length) return finish();
+      const [text, bad] = lines[i++];
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'line';
+      row.setAttribute('role', 'listitem');
+      row.textContent = text;
+      row.dataset.bad = bad ? '1' : '0';
+      row.addEventListener('click', () => {
+        if (row.dataset.done) return;
+        row.dataset.done = '1';
+        if (bad) { hit++; row.classList.add('hit'); pose('chaos'); setTimeout(() => pose('scout'), 700); }
+        else { falseAlarm++; row.classList.add('false'); }
+        paint();
+      });
+      log.append(row);
+      while (log.children.length > VISIBLE) retire(log.firstElementChild as HTMLElement);
+    };
+
+    const finish = () => {
+      clearInterval(timer);
+      [...log.children].forEach((r) => { const row = r as HTMLElement; if (row.dataset.bad === '1' && !row.dataset.done) { miss++; row.classList.add('missed'); } });
+      paint();
+      pose(hit === total && falseAlarm === 0 ? 'success' : 'scout');
+      const you = hit === total && falseAlarm === 0
+        ? 'A perfect run: every failure, no false alarms. That is exactly the oracle’s job.'
+        : `You caught ${hit} of ${total}, with ${falseAlarm} false alarm${falseAlarm === 1 ? '' : 's'}.`;
+      verdict.innerHTML = `${you} Gremlin’s oracle catches all ${total} with no false alarms, every time, because it never judges: it matches the exact strings the framework prints. That is the whole idea behind <a href="/work/gremlin">Gremlin</a>. Enjoyed this? Tell me at <a href="mailto:rma80070@gmail.com?subject=I%20played%20the%20oracle">rma80070@gmail.com</a>.`;
+      startBtn.textContent = 'Play again';
+      startBtn.disabled = false;
+    };
+
+    startBtn.addEventListener('click', () => {
+      hit = falseAlarm = miss = i = 0;
+      log.innerHTML = '';
+      verdict.textContent = '';
+      paint(); pose('scout');
+      startBtn.disabled = true;
+      startBtn.textContent = 'Watching the log…';
+      push();
+      timer = window.setInterval(push, TICK);
+    });
+    paint();
+  }
+
+  // For the curious in DevTools: the oracle reads logs, so the hint lives in one.
+  console.log('%cPsst. Nib is peeking over a line on the home page. Click him.', 'font-weight:700;color:#ff5a1f');
+</script>
+
+<style>
+  .quest { position: relative; margin-top: 112px; min-height: 1px; } /* 1px stops its margins collapsing into the next section while the game is closed */
+  /* The line Nib peeks over, aligned to the content edges. */
+  .quest::before { content: ''; position: absolute; left: var(--pad); right: var(--pad); top: 0; border-top: 1px solid var(--line); }
+  /* Nib's head peeks over the section line: visible if you look, easy to scroll past. */
+  .peek {
+    position: absolute; right: var(--pad); top: -30px; width: 56px; height: 56px; padding: 0; border: 0; background: none;
+    cursor: pointer; clip-path: inset(0 0 26px 0); transition: transform 0.25s ease, clip-path 0.25s ease;
+  }
+  .peek img { width: 56px; height: 56px; display: block; animation: peek-bob 7s ease-in-out infinite; }
+  .peek:hover, .peek:focus-visible, .peek.found { transform: translateY(-8px); clip-path: inset(0 0 0 0); }
+  .peek-tip {
+    position: absolute; right: 64px; top: 10px; white-space: nowrap; font: 400 13px var(--mono); color: var(--muted);
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .peek:hover .peek-tip, .peek:focus-visible .peek-tip { opacity: 1; }
+  @keyframes peek-bob { 0%, 86%, 100% { transform: translateY(0); } 90% { transform: translateY(-5px); } 94% { transform: translateY(0); } }
+
+  .game { padding-top: 48px; }
+  .game[hidden] { display: none; }
+  .game-head { display: grid; grid-template-columns: 150px 1fr; gap: 32px; align-items: center; }
+  .nib :global(svg) { width: 100%; height: auto; display: block; }
+  .rules { max-width: 46em; margin-top: 10px; }
+  .score { display: flex; flex-wrap: wrap; gap: 8px 28px; font: 400 14px var(--mono); color: var(--muted); }
+  .score b { color: var(--ink); font-weight: 500; }
+
+  .log { margin-top: 28px; background: #141414; border-radius: 10px; padding: 12px; height: 296px; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; overflow: hidden; }
+  .log :global(.line) {
+    text-align: left; border: 0; border-radius: 6px; background: transparent; color: #cfcfca; padding: 6px 10px;
+    font: 13px/1.4 var(--mono); cursor: pointer; animation: line-in 0.25s ease-out;
+  }
+  .log :global(.line:hover) { background: #262626; }
+  .log :global(.line.hit) { background: rgb(126 226 168 / 0.15); color: #7ee2a8; }
+  .log :global(.line.false) { background: rgb(255 123 114 / 0.14); color: #ff7b72; text-decoration: line-through; }
+  .log :global(.line.missed) { color: #f2b44a; }
+  @keyframes line-in { from { opacity: 0; transform: translateY(6px); } }
+
+  .game-foot { display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: center; margin-top: 20px; }
+  .game-foot button:disabled { opacity: 0.6; cursor: default; }
+  .verdict { margin: 0; flex: 1 1 30em; max-width: 56em; }
+
+  @media (max-width: 720px) {
+    .game-head { grid-template-columns: 90px 1fr; gap: 16px; }
+    .log { height: 330px; }
+    .log :global(.line) { font-size: 12px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .peek img, .log :global(.line) { animation: none; }
+    .peek { transition: none; }
+  }
+</style>

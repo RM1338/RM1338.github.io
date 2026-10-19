@@ -46,6 +46,7 @@ a { color: inherit; text-underline-offset: 3px; text-decoration-thickness: 1px; 
 a:hover { color: var(--accent); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 img { max-width: 100%; height: auto; display: block; }
+button { font-family: inherit; }
 
 h1, h2, h3 { margin: 0; line-height: 1.1; }
 h1, h2 { font-family: var(--serif); font-weight: 400; letter-spacing: -0.015em; }
