@@ -1,23 +1,28 @@
 ---
-// A side quest's frame: the project's character peeks over a thin line partway down a case study;
-// clicking it opens the game (default slot) in place. One per case study.
+// A side quest's frame: a character peeks over a line; clicking it slides the game (default slot) open in place.
+// In a case study the line is the next chapter's own top border; on the home page the frame draws its own (`line`).
 interface Props {
   id: string;
   /** Short label shown when the character is hovered. */
   tip?: string;
   /** Keep the character still (Bo's brand rules: only Bo's eyes move). */
   still?: boolean;
+  /** Draw a line to peek over (home page). Case studies reuse the next chapter's border instead. */
+  line?: boolean;
 }
-const { id, tip = 'psst · side quest', still = false } = Astro.props;
+const { id, tip = 'psst · side quest', still = false, line = false } = Astro.props;
 ---
 
-<div class="quest" role="region" aria-label="Side quest" data-quest>
+<div class:list={['quest', { line }]} role="region" aria-label="Side quest" data-quest>
   <button type="button" class:list={['peek', { still }]} data-q-open aria-expanded="false" aria-controls={id} title={`${tip}?`}>
     <span class="peek-art"><slot name="peek" /></span>
     <span class="peek-tip">{tip}</span>
   </button>
-  <div class="game" id={id} data-q-body hidden>
-    <slot />
+  <div class="fold" id={id} data-q-body inert>
+    <div class="fold-inner">
+      <div class="game"><slot /></div>
+      <button type="button" class="close" data-q-close>Close</button>
+    </div>
   </div>
 </div>
 
@@ -25,22 +30,28 @@ const { id, tip = 'psst · side quest', still = false } = Astro.props;
   for (const q of document.querySelectorAll<HTMLElement>('[data-quest]')) {
     const open = q.querySelector<HTMLButtonElement>('[data-q-open]')!;
     const body = q.querySelector<HTMLElement>('[data-q-body]')!;
-    open.addEventListener('click', () => {
-      const show = body.hidden;
-      body.hidden = !show;
+    const set = (show: boolean) => {
+      q.classList.toggle('open', show);
+      body.inert = !show;
       open.setAttribute('aria-expanded', String(show));
-      open.classList.add('found');
-      if (show) body.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-    });
+      if (show) {
+        open.classList.add('found');
+        setTimeout(() => body.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }), 120);
+      }
+      q.dispatchEvent(new CustomEvent(show ? 'quest-open' : 'quest-close'));
+    };
+    open.addEventListener('click', () => set(!q.classList.contains('open')));
+    q.querySelector('[data-q-close]')!.addEventListener('click', () => { set(false); open.focus({ preventScroll: true }); });
   }
 </script>
 
 <style>
-  .quest { position: relative; margin: 72px 0; min-height: 1px; } /* 1px keeps its margins from collapsing while closed */
-  .quest::before { content: ''; position: absolute; left: 0; right: 0; top: 0; border-top: 1px solid var(--line); }
-  /* The character peeks over the line: visible if you look, easy to scroll past. */
+  /* Zero height while closed, so the character sits exactly on the line below it. */
+  .quest { position: relative; }
+  .quest.line { margin: 112px 0; min-height: 1px; }
+  .quest.line::before { content: ''; position: absolute; left: 0; right: 0; top: 0; border-top: 1px solid var(--line); }
   .peek {
-    position: absolute; right: 0; top: -30px; width: 56px; height: 56px; padding: 0; border: 0; background: none;
+    position: absolute; right: 0; top: -30px; z-index: 2; width: 56px; height: 56px; padding: 0; border: 0; background: none;
     cursor: pointer; clip-path: inset(0 0 26px 0); transition: transform 0.25s ease, clip-path 0.25s ease;
   }
   .peek-art { display: block; width: 56px; height: 56px; animation: peek-bob 7s ease-in-out infinite; }
@@ -50,7 +61,14 @@ const { id, tip = 'psst · side quest', still = false } = Astro.props;
   .peek-tip { position: absolute; right: 64px; top: 10px; white-space: nowrap; font: 400 13px var(--mono); color: var(--muted); opacity: 0; transition: opacity 0.2s; }
   .peek:hover .peek-tip, .peek:focus-visible .peek-tip { opacity: 1; }
   @keyframes peek-bob { 0%, 86%, 100% { transform: translateY(0); } 90% { transform: translateY(-5px); } 94% { transform: translateY(0); } }
-  .game { padding-top: 48px; scroll-margin-top: calc(var(--nav-h) + var(--strip-h, 0px) + 24px); }
-  .game[hidden] { display: none; }
-  @media (prefers-reduced-motion: reduce) { .peek-art { animation: none; } .peek { transition: none; } }
+
+  /* Slide open and closed: the row grows from 0fr to 1fr while the content fades. */
+  .fold { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.45s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.3s ease; }
+  .quest:global(.open) .fold { grid-template-rows: 1fr; opacity: 1; }
+  .fold-inner { overflow: hidden; min-height: 0; }
+  .game { padding: 56px 0 8px; }
+  .close { margin: 16px 0 72px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--muted); cursor: pointer; font-size: 14px; }
+  .close:hover { color: var(--ink); border-color: var(--ink); }
+  .fold { scroll-margin-top: calc(var(--nav-h) + var(--strip-h, 0px) + 24px); }
+  @media (prefers-reduced-motion: reduce) { .peek-art { animation: none; } .peek, .fold { transition: none; } }
 </style>

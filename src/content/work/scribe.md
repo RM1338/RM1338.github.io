@@ -3,7 +3,6 @@ title: Scribe
 order: 3
 kind: Shipped app
 tagline: An AI meeting recorder that runs on an API key you control and stores recordings only on your phone.
-plain: "A meeting recorder for your phone. Press record, and afterwards it hands you the decisions and the to-do list. Your recordings stay on your phone."
 status: { label: "v0.1.2 on Android", tone: live }
 role: Sole developer
 dates: Mar to Sep 2026

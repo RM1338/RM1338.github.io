@@ -4,6 +4,7 @@ import Base from '../layouts/Base.astro';
 import { hasResume } from '../lib/site';
 import Ev from '../components/Ev.astro';
 import { figures } from '../components/figures';
+import WhackGame from '../components/quest/WhackGame.astro';
 import { contributions } from '../lib/github';
 
 const work = (await getCollection('work')).sort((a, b) => a.data.order - b.data.order);
@@ -69,19 +70,6 @@ const posts = [
   </section>
 
   <script>
-    // Explain it like an engineer, or like a friend: swaps each project card's description. The choice is remembered.
-    const work = document.querySelector<HTMLElement>('[data-explain]');
-    const setMode = (m: string) => {
-      if (!work) return;
-      work.dataset.explain = m;
-      work.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-checked', String((b as HTMLElement).dataset.mode === m)));
-      try { localStorage.setItem('explain-mode', m); } catch { /* fine without it */ }
-    };
-    work?.querySelectorAll<HTMLElement>('[data-mode]').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode!)));
-    try { const saved = localStorage.getItem('explain-mode'); if (saved === 'friend') setMode('friend'); } catch { /* ignore */ }
-  </script>
-
-  <script>
     // Live Bengaluru time beside the pronunciation, updated each minute.
     const clock = document.getElementById('clock');
     const tick = () => {
@@ -91,15 +79,8 @@ const posts = [
     setInterval(tick, 30_000);
   </script>
 
-  <section class="work wrap" id="work" data-explain="engineer">
-    <div class="work-head">
-      <p class="label">Selected work</p>
-      <div class="explain" role="radiogroup" aria-label="Explain my projects like">
-        <span>Explain it like</span>
-        <button type="button" role="radio" aria-checked="true" data-mode="engineer">an engineer</button>
-        <button type="button" role="radio" aria-checked="false" data-mode="friend">a friend</button>
-      </div>
-    </div>
+  <section class="work wrap" id="work">
+    <p class="label work-label">Selected work</p>
     {
       [flagship, ...rest].map((p, i) => (
         <article class:list={['card', { 'card-flagship': i === 0 }]}>
@@ -110,9 +91,8 @@ const posts = [
             <h2>
               <a href={`/work/${p.id}`}>{p.data.title}</a>
             </h2>
-            <p class="tagline for-engineer">{p.data.tagline}</p>
-            <p class="tagline for-friend">{p.data.plain}</p>
-            <ul class="hl for-engineer">
+            <p class="tagline">{p.data.tagline}</p>
+            <ul class="hl">
               {p.data.highlights.map((h) => (
                 <li>
                   {h.text} <Ev e={h.evidence} />
@@ -128,6 +108,8 @@ const posts = [
       ))
     }
   </section>
+
+  <div class="wrap"><WhackGame /></div>
 
   <section class="tools wrap" id="toolbox">
     <p class="label">Toolbox</p>
@@ -245,13 +227,7 @@ const posts = [
 
 
   .work { margin-top: var(--section); display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-  .work-head { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px 24px; }
-  .work-head .label { margin: 0; }
-  .explain { display: inline-flex; align-items: center; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: 15px; }
-  .explain span { color: var(--muted); padding: 0 8px 0 10px; }
-  .explain button { border: 0; background: none; padding: 7px 14px; border-radius: 999px; font: inherit; color: var(--ink); cursor: pointer; }
-  .explain button[aria-checked='true'] { background: var(--ink); color: var(--bg); }
-  [data-explain='engineer'] .for-friend, [data-explain='friend'] .for-engineer { display: none; }
+  .work-label { grid-column: 1 / -1; }
   .card { display: grid; grid-template-rows: auto 1fr; border: 1px solid var(--line); background: var(--surface); }
   .card-flagship { grid-column: 1 / -1; grid-template-columns: 7fr 5fr; grid-template-rows: auto; }
   .card-media { border-bottom: 1px solid var(--line); }
@@ -264,6 +240,7 @@ const posts = [
   .card-links { margin-top: auto; padding-top: 8px; display: flex; flex-wrap: wrap; gap: 8px 20px; font-weight: 500; }
 
   .tools { margin-top: var(--section); }
+  .wrap:has(> :global(.quest)) + .tools { margin-top: 0; }
   .tools h2 { margin: 16px 0 32px; max-width: 22ch; }
   .tool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0 32px; }
   .tool-group { border-top: 1.5px solid var(--ink); padding: 16px 0 24px; }

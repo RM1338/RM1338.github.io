@@ -1,0 +1,155 @@
+---
+// Home page side quest: "Whack-a-bug". Bugs pop up; squash them. Sometimes Bo pops up instead: he is a
+// teammate, so leave him alone. 25 seconds, best score remembered. No technical knowledge needed.
+import QuestShell from './QuestShell.astro';
+import bug from './bug.svg?raw';
+import { boSVG } from '../../lib/crewbo/bo.js';
+import '../../lib/crewbo/bo.css';
+import cheer from '../../assets/nib/nib-success.svg?raw';
+import scout from '../../assets/nib/nib-explorer.svg?raw';
+
+const bo = boSVG({ state: 'idle', size: 100, title: 'Bo, a teammate' });
+const boHit = boSVG({ state: 'conflict', size: 100, title: 'Bo, not a bug' });
+---
+
+<QuestShell id="whack-game" tip="psst · squash some bugs" line>
+  <span slot="peek" class="peek-bug" set:html={bug} />
+
+  <div class="wg" data-wg data-bug={bug} data-bo={bo} data-bohit={boHit}>
+    <div class="top">
+      <div>
+        <p class="label">Side quest</p>
+        <h2>Whack-a-bug.</h2>
+        <p class="rules">Squash every bug before it hides. If Bo pops up, leave him alone: he is on the team.</p>
+      </div>
+      <div class="hud">
+        <span>Time <b data-wg-time>25</b></span>
+        <span>Squashed <b data-wg-score>0</b></span>
+        <span>Best <b data-wg-best>0</b></span>
+      </div>
+    </div>
+
+    <div class="grid" data-wg-grid>
+      {Array.from({ length: 9 }, (_, i) => <button type="button" class="hole" data-hole={i} aria-label="Empty spot" tabindex="-1"><span class="who" /></button>)}
+    </div>
+
+    <div class="end" data-wg-end hidden>
+      <div class="nib" data-wg-nib></div>
+      <div>
+        <p class="big" data-wg-rank></p>
+        <p data-wg-line></p>
+      </div>
+    </div>
+    <button type="button" class="btn btn-solid go" data-wg-go>Start</button>
+    <template data-cheer set:html={cheer} />
+    <template data-scout set:html={scout} />
+  </div>
+</QuestShell>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-wg]');
+  if (root) {
+    const BUG = root.dataset.bug!, BO = root.dataset.bo!, BO_HIT = root.dataset.bohit!;
+    const $ = <T extends HTMLElement>(s: string) => root.querySelector<T>(s)!;
+    const holes = [...root.querySelectorAll<HTMLButtonElement>('[data-hole]')];
+    const go = $<HTMLButtonElement>('[data-wg-go]'), end = $('[data-wg-end]');
+    const LENGTH = 25;
+    let score = 0, bonks = 0, left = LENGTH, playing = false, spawnT = 0, clockT = 0;
+    const timers = new Map<HTMLButtonElement, number>();
+    let best = 0;
+    try { best = +(localStorage.getItem('wg-best') || 0); } catch { /* fine */ }
+    $('[data-wg-best]').textContent = `${best}`;
+
+    const clear = (h: HTMLButtonElement) => {
+      clearTimeout(timers.get(h)); timers.delete(h);
+      h.dataset.kind = ''; h.classList.remove('up', 'hit');
+      h.querySelector('.who')!.innerHTML = ''; h.setAttribute('aria-label', 'Empty spot'); h.tabIndex = -1;
+    };
+
+    const spawn = () => {
+      if (!playing) return;
+      const free = holes.filter((h) => !h.dataset.kind);
+      if (free.length) {
+        const h = free[Math.floor(Math.random() * free.length)];
+        const isBo = Math.random() < 0.18;
+        h.dataset.kind = isBo ? 'bo' : 'bug';
+        h.querySelector('.who')!.innerHTML = isBo ? BO : BUG;
+        h.setAttribute('aria-label', isBo ? 'Bo, a teammate' : 'A bug. Squash it');
+        h.tabIndex = 0;
+        h.classList.add('up');
+        const stay = Math.max(620, 1100 - (LENGTH - left) * 18);
+        timers.set(h, window.setTimeout(() => clear(h), stay));
+      }
+      spawnT = window.setTimeout(spawn, Math.max(380, 720 - (LENGTH - left) * 12));
+    };
+
+    holes.forEach((h) => h.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (!playing || !h.dataset.kind || h.classList.contains('hit')) return;
+      whack(h);
+    }));
+    holes.forEach((h) => h.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && h.dataset.kind) { e.preventDefault(); whack(h); } }));
+
+    const whack = (h: HTMLButtonElement) => {
+      clearTimeout(timers.get(h));
+      h.classList.add('hit');
+      if (h.dataset.kind === 'bug') { score++; }
+      else { bonks++; score = Math.max(0, score - 2); h.querySelector('.who')!.innerHTML = BO_HIT; }
+      $('[data-wg-score]').textContent = `${score}`;
+      timers.set(h, window.setTimeout(() => clear(h), 260));
+    };
+
+    const finish = () => {
+      playing = false; clearTimeout(spawnT); clearInterval(clockT);
+      holes.forEach(clear);
+      best = Math.max(best, score);
+      try { localStorage.setItem('wg-best', `${best}`); } catch { /* fine */ }
+      $('[data-wg-best]').textContent = `${best}`;
+      const rank = score >= 22 ? 'Basically a gremlin.' : score >= 14 ? 'Senior bug squasher.' : score >= 7 ? 'Junior tester.' : 'The bugs won this round.';
+      $('[data-wg-nib]').innerHTML = $<HTMLTemplateElement>(score >= 14 ? '[data-cheer]' : '[data-scout]').innerHTML;
+      $('[data-wg-rank]').textContent = `${rank} ${score} squashed.`;
+      $('[data-wg-line]').innerHTML = `${bonks ? `You bonked Bo ${bonks} time${bonks === 1 ? '' : 's'}. He forgives you. ` : 'Bo made it through untouched. '}My agent Gremlin hunts bugs like this all day, without the reflexes: <a href="/work/gremlin">see how</a>.`;
+      end.hidden = false;
+      go.hidden = false; go.textContent = 'Play again';
+    };
+
+    const start = () => {
+      score = 0; bonks = 0; left = LENGTH; playing = true;
+      $('[data-wg-score]').textContent = '0'; $('[data-wg-time]').textContent = `${left}`;
+      end.hidden = true; go.hidden = true;
+      clockT = window.setInterval(() => { left--; $('[data-wg-time]').textContent = `${left}`; if (left <= 0) finish(); }, 1000);
+      spawn();
+    };
+
+    go.addEventListener('click', start);
+    root.closest('[data-quest]')?.addEventListener('quest-close', () => { if (playing) { playing = false; clearTimeout(spawnT); clearInterval(clockT); holes.forEach(clear); go.hidden = false; go.textContent = 'Start'; } });
+  }
+</script>
+
+<style>
+  .peek-bug :global(svg) { width: 100%; height: 100%; transform: rotate(-12deg); }
+  .top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px 32px; }
+  .top h2 { margin: 6px 0 8px; }
+  .rules { margin: 0; max-width: 40em; color: var(--muted); }
+  .hud { display: flex; gap: 22px; font: 400 15px var(--mono); }
+  .hud b { font-weight: 500; }
+  .grid { margin-top: 24px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; max-width: 560px; }
+  .hole {
+    position: relative; aspect-ratio: 1.35; border: 1.5px solid var(--ink); border-radius: 14px; overflow: hidden; padding: 0; cursor: crosshair;
+    background: radial-gradient(ellipse 60% 22% at 50% 88%, rgb(20 20 20 / 0.16), transparent 70%), var(--surface);
+  }
+  .who { position: absolute; left: 50%; bottom: 8%; width: 58%; transform: translate(-50%, 110%); transition: transform 0.16s cubic-bezier(0.2, 0.9, 0.3, 1.3); }
+  .who :global(svg) { width: 100%; height: auto; display: block; }
+  .hole:global(.up) .who { transform: translate(-50%, 0); }
+  .hole:global(.hit) .who { transform: translate(-50%, 0) scale(1.3, 0.35); transition-duration: 0.1s; }
+  .hole[data-kind='bug']:global(.hit) { background: #fdf1d8; }
+  .hole[data-kind='bo']:global(.hit) { background: #fbeceb; }
+  .end { display: flex; align-items: center; gap: 24px; margin-top: 24px; }
+  .end[hidden] { display: none; }
+  .nib { width: 110px; flex: none; }
+  .nib :global(svg) { width: 100%; height: auto; display: block; }
+  .big { font-family: var(--serif); font-size: clamp(26px, 3vw, 34px); margin: 0 0 6px; }
+  .go { margin-top: 20px; }
+  .go[hidden] { display: none; }
+  @media (prefers-reduced-motion: reduce) { .who { transition: none; } }
+</style>

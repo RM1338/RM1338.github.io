@@ -1,112 +1,166 @@
 ---
-// Scribe's side quest: "Where does it live?". Sort each piece of a meeting's data, and each key,
-// into the place Scribe actually keeps it. Answers follow Scribe's code (storage, edge functions, schema).
+// Scribe's side quest: "Pack it right", an arcade. Each piece of a meeting's data (and each key) drops in
+// against a timer; send it where Scribe really keeps it. Answers follow Scribe's code.
 import QuestShell from './QuestShell.astro';
 
-const places = { phone: 'On your phone', server: 'On Scribe’s server', sync: 'Synced to your account' } as const;
-const items: [string, keyof typeof places, string][] = [
-  ['The audio recording of your meeting', 'phone',
-    'Recorded and kept on the phone. It is sent to Groq to be transcribed, but never stored in the cloud.'],
-  ['Scribe’s shared Groq API key', 'server',
-    'Only in a server-side secret, read by an edge function after it checks you are signed in. A key inside an app can be pulled out by anyone with the APK.'],
-  ['The meeting transcript', 'sync',
-    'Saved on the phone first, then mirrored to your account, so it follows you to other devices.'],
-  ['Your own Groq API key, if you add one', 'phone',
-    'Kept in the app’s settings on your phone. Your requests then go straight to Groq and are billed to you, not through Scribe’s server.'],
-  ['The Supabase anon key', 'phone',
-    'Surprise: it ships inside the app on purpose. It can only reach what Row Level Security allows, so it is safe to be public.'],
-  ['Your folders and scheduled meetings', 'sync',
-    'Text only, synced to your account, and protected so each user can only ever read their own rows.'],
+const bins = { phone: 'Phone', server: 'Server', account: 'Your account' } as const;
+// [item, where it lives, one-line reason shown only when you get it wrong]
+const items: [string, keyof typeof bins, string][] = [
+  ['Audio recording', 'phone', 'Recordings stay on the phone.'],
+  ['Scribe’s shared API key', 'server', 'The shared key never ships in the app.'],
+  ['Transcript', 'account', 'Text syncs to your account.'],
+  ['Your own API key', 'phone', 'Your own key lives in the app’s settings.'],
+  ['Supabase anon key', 'phone', 'Trick: it ships in the app on purpose. It is public by design.'],
+  ['Folders', 'account', 'Text syncs to your account.'],
+  ['Summary', 'account', 'Text syncs to your account.'],
+  ['Scheduled meetings', 'account', 'Text syncs to your account.'],
 ];
 ---
 
 <QuestShell id="key-game">
   <img slot="peek" src="/brand/scribe-mark.png" alt="" width="56" height="56" />
 
-  <div class="kg" data-kg data-items={JSON.stringify(items)} data-places={JSON.stringify(places)}>
-    <p class="label">Side quest</p>
-    <h2>Where does it live?</h2>
-    <p class="intro">
-      A meeting app handles audio, text and secret keys. Put each one where Scribe actually keeps it. One of them is
-      a trick question.
-    </p>
-    <p class="score" aria-live="polite">Right <b data-kg-right>0</b> of <b>{items.length}</b></p>
-
-    <div class="card" data-kg-card>
-      <p class="item" data-kg-item>Ready?</p>
-      <div class="choices" data-kg-choices hidden>
-        {Object.entries(places).map(([k, label]) => <button type="button" class="btn" data-place={k}>{label}</button>)}
+  <div class="kg" data-kg data-items={JSON.stringify(items)}>
+    <div class="top">
+      <div>
+        <p class="label">Side quest</p>
+        <h2>Pack it right.</h2>
+        <p class="rules">Things from a meeting drop in. Send each one where Scribe keeps it, before the timer runs out.</p>
       </div>
-      <p class="why" data-kg-why aria-live="polite"></p>
-      <div class="acts">
-        <button type="button" class="btn btn-solid" data-kg-go>Start</button>
+      <div class="hud">
+        <span class="lives" data-kg-lives aria-label="Lives"></span>
+        <span>Score <b data-kg-score>0</b></span>
+        <span class="combo" data-kg-combo></span>
       </div>
     </div>
+
+    <div class="stage">
+      <div class="drop" data-kg-drop><span class="muted">Ready when you are.</span></div>
+      <div class="timer"><i data-kg-timer></i></div>
+      <p class="flash" data-kg-flash aria-live="polite"></p>
+      <div class="bins">
+        {Object.entries(bins).map(([k, label], n) => (
+          <button type="button" class="bin" data-bin={k} disabled>
+            <span class="bin-name">{label}</span><kbd>{n + 1}</kbd>
+          </button>
+        ))}
+      </div>
+    </div>
+    <div class="end" data-kg-end hidden></div>
+    <button type="button" class="btn btn-solid go" data-kg-go>Start</button>
   </div>
 </QuestShell>
 
 <script>
   const root = document.querySelector<HTMLElement>('[data-kg]');
   if (root) {
-    const items: [string, string, string][] = JSON.parse(root.dataset.items!);
-    const places: Record<string, string> = JSON.parse(root.dataset.places!);
+    const ITEMS: [string, string, string][] = JSON.parse(root.dataset.items!);
     const $ = <T extends HTMLElement>(s: string) => root.querySelector<T>(s)!;
-    const item = $('[data-kg-item]'), why = $('[data-kg-why]'), choices = $('[data-kg-choices]'), go = $<HTMLButtonElement>('[data-kg-go]');
-    let i = 0, right = 0, answered = false;
+    const drop = $('[data-kg-drop]'), bar = $('[data-kg-timer]'), flash = $('[data-kg-flash]'), end = $('[data-kg-end]'), go = $<HTMLButtonElement>('[data-kg-go]');
+    const bins = [...root.querySelectorAll<HTMLButtonElement>('[data-bin]')];
+    const ROUNDS = 16;
+    let deck: [string, string, string][] = [], cur: [string, string, string] | null = null;
+    let lives = 3, score = 0, combo = 0, round = 0, right = 0, playing = false, timeout = 0;
 
-    const show = () => {
-      answered = false;
-      item.textContent = items[i][0];
-      why.textContent = '';
-      why.className = 'why';
-      choices.hidden = false;
-      choices.querySelectorAll('button').forEach((b) => { b.disabled = false; b.classList.remove('picked', 'correct'); });
-      go.hidden = true;
+    const hud = () => {
+      $('[data-kg-lives]').textContent = '●'.repeat(lives) + '○'.repeat(3 - lives);
+      $('[data-kg-score]').textContent = `${score}`;
+      $('[data-kg-combo]').textContent = combo > 1 ? `×${combo} combo` : '';
+    };
+    const say = (t: string, kind = '') => { flash.textContent = t; flash.className = `flash ${kind}`; };
+    const shuffle = <T,>(a: T[]) => a.map((x) => [Math.random(), x] as const).sort((p, q) => p[0] - q[0]).map(([, x]) => x);
+
+    const next = () => {
+      if (!playing) return;
+      if (round >= ROUNDS || lives <= 0) return finish();
+      round++;
+      if (!deck.length) deck = shuffle(ITEMS);
+      cur = deck.pop()!;
+      drop.innerHTML = `<span class="item">${cur[0]}</span>`;
+      drop.classList.remove('in'); void drop.offsetWidth; drop.classList.add('in');
+      bins.forEach((b) => { b.disabled = false; b.classList.remove('good', 'wrong'); });
+      const ms = Math.max(1700, 4200 - round * 150);
+      bar.style.transition = 'none'; bar.style.transform = 'scaleX(1)';
+      requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.transition = `transform ${ms}ms linear`; bar.style.transform = 'scaleX(0)'; }));
+      clearTimeout(timeout);
+      timeout = window.setTimeout(() => answer(null), ms);
     };
 
-    choices.querySelectorAll<HTMLButtonElement>('[data-place]').forEach((b) =>
-      b.addEventListener('click', () => {
-        if (answered) return;
-        answered = true;
-        const [, answer, reason] = items[i];
-        const ok = b.dataset.place === answer;
-        if (ok) right++;
-        $('[data-kg-right]').textContent = `${right}`;
-        b.classList.add('picked');
-        choices.querySelector(`[data-place="${answer}"]`)!.classList.add('correct');
-        choices.querySelectorAll('button').forEach((x) => (x.disabled = true));
-        why.className = `why ${ok ? 'ok' : 'no'}`;
-        why.innerHTML = `<b>${ok ? 'Right.' : `Not quite: ${places[answer].toLowerCase()}.`}</b> ${reason}`;
-        go.hidden = false;
-        go.textContent = i === items.length - 1 ? 'See how you did' : 'Next';
-      }),
-    );
+    const answer = (bin: string | null) => {
+      if (!cur || !playing) return;
+      clearTimeout(timeout);
+      const [, where, why] = cur; cur = null;
+      bins.forEach((b) => (b.disabled = true));
+      root.querySelector(`[data-bin="${where}"]`)!.classList.add('good');
+      if (bin === where) { right++; combo++; score += 10 * combo; say(combo > 2 ? 'Nice streak.' : 'Packed.', 'ok'); }
+      else {
+        lives--; combo = 0;
+        if (bin) root.querySelector(`[data-bin="${bin}"]`)!.classList.add('wrong');
+        say(`${bin ? 'Wrong bin.' : 'Too slow.'} ${why}`, 'bad');
+      }
+      hud();
+      setTimeout(next, bin === where ? 450 : 1300);
+    };
 
-    go.addEventListener('click', () => {
-      if (go.textContent === 'Start' || go.textContent === 'Play again') { i = 0; right = 0; $('[data-kg-right]').textContent = '0'; return show(); }
-      if (i < items.length - 1) { i++; return show(); }
-      choices.hidden = true;
-      item.textContent = right === items.length ? 'All six. You could have designed Scribe.' : `${right} of ${items.length}.`;
-      why.className = 'why';
-      why.innerHTML = 'That is Scribe’s whole design: audio stays home, text follows you, and the key that can spend money never leaves the server. The story of how that last rule came about is in <a href="#the-problem">the problem</a> chapter.';
-      go.textContent = 'Play again';
+    const finish = () => {
+      playing = false; clearTimeout(timeout);
+      bins.forEach((b) => { b.disabled = true; b.classList.remove('good', 'wrong'); });
+      bar.style.transition = 'none'; bar.style.transform = 'scaleX(0)'; say('');
+      let best = score;
+      try { best = Math.max(score, +(localStorage.getItem('kg-best') || 0)); localStorage.setItem('kg-best', `${best}`); } catch { /* fine */ }
+      drop.innerHTML = '';
+      end.hidden = false;
+      end.innerHTML = `<p class="big">${lives > 0 ? 'All packed.' : 'Out of lives.'} <b>${score}</b> points</p>
+        <p>Best ${best} · ${right} of ${round} right</p>
+        <p class="muted">Scribe’s three rules: audio stays on your phone, text follows you to your account, and the key that can spend money never leaves the server.</p>`;
+      go.hidden = false; go.textContent = 'Play again';
+    };
+
+    const start = () => {
+      lives = 3; score = 0; combo = 0; round = 0; right = 0; deck = []; playing = true;
+      end.hidden = true; go.hidden = true; say(''); hud(); next();
+    };
+
+    bins.forEach((b) => b.addEventListener('click', () => answer(b.dataset.bin!)));
+    go.addEventListener('click', start);
+    root.closest('[data-quest]')?.addEventListener('quest-close', () => { playing = false; clearTimeout(timeout); });
+    document.addEventListener('keydown', (e) => {
+      if (!playing || !cur) return;
+      const n = ['1', '2', '3'].indexOf(e.key);
+      if (n >= 0) answer(bins[n].dataset.bin!);
     });
+    hud();
   }
 </script>
 
 <style>
-  .kg h2 { margin: 6px 0 12px; }
-  .intro { max-width: 46em; }
-  .score { font: 400 14px var(--mono); color: var(--muted); }
-  .score b { color: var(--ink); font-weight: 500; }
-  .card { margin-top: 20px; border: 1.5px solid var(--ink); background: var(--surface); padding: 24px; max-width: 760px; }
-  .item { font-family: var(--serif); font-size: clamp(24px, 3vw, 32px); line-height: 1.2; margin: 0 0 18px; }
-  .choices { display: flex; flex-wrap: wrap; gap: 10px; }
-  .choices[hidden] { display: none; }
-  .choices button:disabled { cursor: default; opacity: 0.55; }
-  .choices button:global(.correct) { opacity: 1; background: #1f8a4c; border-color: #1f8a4c; color: #fff; }
-  .choices button:global(.picked:not(.correct)) { opacity: 1; background: #fbeceb; border-color: #c93a32; color: #c93a32; }
-  .why { margin: 16px 0 0; min-height: 3em; max-width: 46em; }
-  .acts { margin-top: 16px; }
-  .acts [hidden] { display: none; }
+  .top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px 32px; }
+  .top h2 { margin: 6px 0 8px; }
+  .rules { margin: 0; max-width: 40em; color: var(--muted); }
+  .hud { display: flex; gap: 20px; align-items: center; font: 400 15px var(--mono); }
+  .hud b { font-weight: 500; }
+  .lives { color: #c93a32; letter-spacing: 3px; font-size: 18px; }
+  .combo { color: var(--accent); min-width: 7em; }
+  .stage { margin-top: 24px; border: 1.5px solid var(--ink); background: var(--surface); padding: 22px; max-width: 820px; }
+  .drop { min-height: 88px; display: grid; place-items: center; }
+  .drop :global(.item) { font-family: var(--serif); font-size: clamp(26px, 3.4vw, 38px); }
+  .drop:global(.in) :global(.item) { animation: drop-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.3); }
+  @keyframes drop-in { from { opacity: 0; transform: translateY(-24px) scale(0.96); } }
+  .timer { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin-top: 10px; }
+  .timer i { display: block; height: 100%; background: var(--ink); transform-origin: left; transform: scaleX(0); }
+  .flash { margin: 12px 0; min-height: 1.5em; font-weight: 500; text-align: center; }
+  .flash:global(.ok) { color: #1f8a4c; }
+  .flash:global(.bad) { color: #c93a32; }
+  .bins { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .bin { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px 8px; border: 1.5px dashed var(--ink); border-radius: 12px; background: var(--bg); cursor: pointer; font-size: 17px; color: var(--ink); transition: transform 0.12s, background 0.2s; }
+  .bin:not(:disabled):hover { transform: translateY(-2px); background: #fff; }
+  .bin:disabled { cursor: default; }
+  .bin:global(.good) { border-style: solid; border-color: #1f8a4c; background: #e6f4ec; }
+  .bin:global(.wrong) { border-style: solid; border-color: #c93a32; background: #fbeceb; }
+  kbd { font: 12px var(--mono); color: var(--muted); }
+  .end { margin-top: 20px; }
+  .end :global(.big) { font-family: var(--serif); font-size: clamp(26px, 3vw, 34px); margin: 0 0 6px; }
+  .go { margin-top: 20px; }
+  .go[hidden] { display: none; }
+  @media (prefers-reduced-motion: reduce) { .drop:global(.in) :global(.item) { animation: none; } .bin { transition: none; } }
 </style>
