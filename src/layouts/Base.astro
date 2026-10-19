@@ -36,7 +36,8 @@ const email = 'rma80070@gmail.com';
   </head>
   <body>
     <a class="skip" href="#main">Skip to content</a>
-    <header class="nav wrap">
+    <header class="nav-bar">
+      <div class="nav wrap">
       <a class="name" href="/">Ronel Abraham Mathew</a>
       <nav aria-label="Main">
         <a href="/#work">Work</a>
@@ -45,10 +46,19 @@ const email = 'rma80070@gmail.com';
         <a class="hide-sm" href="https://github.com/RM1338" rel="me">GitHub</a>
         <a class="hide-sm" href="https://www.linkedin.com/in/ronelm" rel="me">LinkedIn</a>
       </nav>
+      </div>
     </header>
     <main id="main">
       <slot />
     </main>
+    <script>
+      // One name on screen at a time: while the hero's name is visible, the navbar's name steps aside.
+      const hero = document.querySelector('[data-hero-name]');
+      const name = document.querySelector('.nav .name');
+      if (hero && name) {
+        new IntersectionObserver(([e]) => name.classList.toggle('shown', !e.isIntersecting)).observe(hero);
+      }
+    </script>
     <footer class="foot wrap" id="contact">
       <p class="label">Contact</p>
       <p class="foot-cta">Let's talk: <a href={`mailto:${email}`}>{email}</a></p>
@@ -63,15 +73,19 @@ const email = 'rma80070@gmail.com';
 </html>
 
 <style>
+  /* Sticky, full-width bar; its height is --nav-h so anchors and the case-study chapter strip can clear it. */
+  .nav-bar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
   .nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 16px;
-    padding-top: 20px;
-    padding-bottom: 20px;
+    height: var(--nav-h);
   }
-  .name { font-weight: 600; text-decoration: none; letter-spacing: -0.01em; }
+  .name { font-weight: 600; text-decoration: none; letter-spacing: -0.01em; transition: opacity 0.25s, transform 0.25s; }
+  /* On a page whose hero shows the name, the nav's copy starts hidden (no flash on load) and appears once the hero name scrolls away. */
+  :global(body:has([data-hero-name])) .name:not(.shown) { opacity: 0; transform: translateY(-4px); pointer-events: none; }
+  @media (prefers-reduced-motion: reduce) { .name { transition: none; } }
   nav { display: flex; gap: 20px; font-size: 15px; }
   nav a { text-decoration: none; }
   @media (max-width: 720px) {

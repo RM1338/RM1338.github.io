@@ -19,6 +19,7 @@
   --max: 1280px;
   --pad: 32px;
   --section: 160px;
+  --nav-h: 64px;
   color-scheme: light;
 }
 
@@ -28,7 +29,10 @@
 }
 
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+/* Anchor jumps land with breathing room below the sticky nav instead of under it. */
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: calc(var(--nav-h) + 40px); scroll-behavior: smooth; }
+html:has(.chapters) { scroll-padding-top: calc(var(--nav-h) + 96px); }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 body {
   margin: 0;
   background: var(--bg);
